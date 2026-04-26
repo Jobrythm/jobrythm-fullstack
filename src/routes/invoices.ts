@@ -1,0 +1,244 @@
+import { Router, Response } from 'express';
+import { AppDataSource } from '../config/database.js';
+import { Job } from '../entities/Job.js';
+import { Invoice } from '../entities/Invoice.js';
+import { User } from '../entities/User.js';
+import { authenticateToken, AuthRequest } from '../middleware/auth.js';
+import { InvoiceStatus } from '../types/enums.js';
+import { addDays } from 'date-fns';
+import { getNextNumber } from '../utils/numberSequence.js';
+import { calculateTotals } from '../utils/calculations.js';
+
+const router = Router();
+
+// All routes require authentication
+router.use(authenticateToken);
+
+// Get all invoices with pagination
+router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const page = parseInt((req.query.page as string) || '1');
+    const pageSize = parseInt((req.query.pageSize as string) || '30');
+
+    const invoiceRepository = AppDataSource.getRepository(Invoice);
+    const skip = (page - 1) * pageSize;
+
+    const [invoices, total] = await invoiceRepository
+      .createQueryBuilder('invoice')
+      .leftJoinAndSelect('invoice.job', 'job')
+      .leftJoinAndSelect('job.client', 'client')
+      .where('job.userId = :userId', { userId: req.user!.userId })
+      .skip(skip)
+      .take(pageSize)
+      .orderBy('invoice.createdAt', 'DESC')
+      .getManyAndCount();
+
+    res.json({
+      items: invoices,
+      page,
+      pageSize,
+      total,
+    });
+  } catch (error) {
+    console.error('Get invoices error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get invoice by ID
+router.get('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const invoiceRepository = AppDataSource.getRepository(Invoice);
+    const invoice = await invoiceRepository
+      .createQueryBuilder('invoice')
+      .leftJoinAndSelect('invoice.job', 'job')
+      .leftJoinAndSelect('job.client', 'client')
+      .leftJoinAndSelect('job.lineItems', 'lineItems')
+      .where('invoice.id = :id', { id: req.params.id })
+      .andWhere('job.userId = :userId', { userId: req.user!.userId })
+      .getOne();
+
+    if (!invoice) {
+      res.status(404).json({ error: 'Invoice not found' });
+      return;
+    }
+
+    res.json(invoice);
+  } catch (error) {
+    console.error('Get invoice error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Create invoice for a job
+router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const jobRepository = AppDataSource.getRepository(Job);
+    const job = await jobRepository.findOne({
+      where: { id: req.body.jobId, userId: req.user!.userId },
+      relations: ['lineItems'],
+    });
+
+    if (!job) {
+      res.status(404).json({ error: 'Job not found' });
+      return;
+    }
+
+    // Get user settings
+    const userRepository = AppDataSource.getRepository(User);
+    const user = await userRepository.findOne({ where: { id: req.user!.userId } });
+
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    const { notes, terms, dueDate } = req.body;
+
+    // Calculate totals from line items
+    const totalNet = job.lineItems.reduce((sum, item) => sum + item.totalPrice, 0);
+    const vatRate = user.defaultVatRate;
+    const totals = calculateTotals(totalNet, vatRate);
+
+    // Generate invoice number
+    const invoiceNumber = await getNextNumber(req.user!.userId, 'INV');
+
+    const invoiceRepository = AppDataSource.getRepository(Invoice);
+    const invoice = invoiceRepository.create({
+      jobId: job.id,
+      invoiceNumber,
+      status: InvoiceStatus.DRAFT,
+      dueDate: dueDate ? new Date(dueDate) : addDays(new Date(), 30),
+      notes,
+      terms: terms || user.defaultPaymentTerms,
+      totalNet: totals.totalNet,
+      vatRate,
+      vatAmount: totals.vatAmount,
+      totalGross: totals.totalGross,
+    });
+
+    await invoiceRepository.save(invoice);
+
+    res.status(201).json(invoice);
+  } catch (error) {
+    console.error('Create invoice error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Update invoice
+router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const invoiceRepository = AppDataSource.getRepository(Invoice);
+    const invoice = await invoiceRepository
+      .createQueryBuilder('invoice')
+      .leftJoinAndSelect('invoice.job', 'job')
+      .where('invoice.id = :id', { id: req.params.id })
+      .andWhere('job.userId = :userId', { userId: req.user!.userId })
+      .getOne();
+
+    if (!invoice) {
+      res.status(404).json({ error: 'Invoice not found' });
+      return;
+    }
+
+    const { status, notes, terms, dueDate } = req.body;
+
+    if (status !== undefined) invoice.status = status;
+    if (notes !== undefined) invoice.notes = notes;
+    if (terms !== undefined) invoice.terms = terms;
+    if (dueDate !== undefined) invoice.dueDate = dueDate ? new Date(dueDate) : undefined;
+
+    await invoiceRepository.save(invoice);
+
+    res.json(invoice);
+  } catch (error) {
+    console.error('Update invoice error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Mark invoice as paid
+router.patch('/:id/paid', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const invoiceRepository = AppDataSource.getRepository(Invoice);
+    const invoice = await invoiceRepository
+      .createQueryBuilder('invoice')
+      .leftJoinAndSelect('invoice.job', 'job')
+      .where('invoice.id = :id', { id: req.params.id })
+      .andWhere('job.userId = :userId', { userId: req.user!.userId })
+      .getOne();
+
+    if (!invoice) {
+      res.status(404).json({ error: 'Invoice not found' });
+      return;
+    }
+
+    invoice.status = InvoiceStatus.PAID;
+    invoice.paidAt = new Date();
+
+    await invoiceRepository.save(invoice);
+
+    res.json(invoice);
+  } catch (error) {
+    console.error('Mark invoice as paid error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Send invoice (stub - would integrate with email service)
+router.post('/:id/send', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const invoiceRepository = AppDataSource.getRepository(Invoice);
+    const invoice = await invoiceRepository
+      .createQueryBuilder('invoice')
+      .leftJoinAndSelect('invoice.job', 'job')
+      .where('invoice.id = :id', { id: req.params.id })
+      .andWhere('job.userId = :userId', { userId: req.user!.userId })
+      .getOne();
+
+    if (!invoice) {
+      res.status(404).json({ error: 'Invoice not found' });
+      return;
+    }
+
+    invoice.status = InvoiceStatus.SENT;
+    invoice.sentAt = new Date();
+
+    await invoiceRepository.save(invoice);
+
+    // TODO: Send email with PDF attachment
+    res.json({ message: 'Invoice sent successfully', invoice });
+  } catch (error) {
+    console.error('Send invoice error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Download invoice PDF (stub - would generate PDF)
+router.get('/:id/pdf', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const invoiceRepository = AppDataSource.getRepository(Invoice);
+    const invoice = await invoiceRepository
+      .createQueryBuilder('invoice')
+      .leftJoinAndSelect('invoice.job', 'job')
+      .leftJoinAndSelect('job.client', 'client')
+      .leftJoinAndSelect('job.lineItems', 'lineItems')
+      .where('invoice.id = :id', { id: req.params.id })
+      .andWhere('job.userId = :userId', { userId: req.user!.userId })
+      .getOne();
+
+    if (!invoice) {
+      res.status(404).json({ error: 'Invoice not found' });
+      return;
+    }
+
+    // TODO: Generate PDF
+    res.status(501).json({ message: 'PDF generation not yet implemented' });
+  } catch (error) {
+    console.error('Download invoice PDF error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+export default router;
