@@ -1,0 +1,37 @@
+:root {
+  --tblr-primary: #f76707; /* Orange-red ish */
+  --tblr-primary-rgb: 247, 103, 7;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--tblr-body-bg);
+}
+
+.page-title {
+  margin-bottom: 0;
+}
+
+.table-responsive {
+  overflow-x: auto;
+}
+
+.modal {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.empty {
+  padding: 4rem 1.5rem;
+}
+
+@media (max-width: 991px) {
+  .navbar-vertical {
+    width: 100%;
+  }
+}

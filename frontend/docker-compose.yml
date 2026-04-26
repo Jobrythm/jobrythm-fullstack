@@ -1,0 +1,22 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${HOST_PORT:-3000}:80"
+    environment:
+      # API_URL must be exactly 1, 2, or 3 — selects which backend nginx proxies /api to:
+      #   1 = http://host.docker.internal:8080/api  (backend on your machine; see extra_hosts)
+      #   2 = https://api.jobrythm.aricummings.com/api
+      #   3 = https://api.jobrythm.com/api
+      - API_URL=${API_URL:-2}
+    # Needed for API_URL=1 so the container can reach the host's port 8080
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - app_data:/var/lib/jobrythm/data
+    restart: always
+
+volumes:
+  app_data:
