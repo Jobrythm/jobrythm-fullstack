@@ -1,81 +1,125 @@
-# Jobrythm Frontend
+# Jobrythm Fullstack
 
-Jobrythm is a SaaS job costing and quoting dashboard for tradespeople.
+A comprehensive job management system with quoting, invoicing, and client management built with TypeScript, Express, React, and PostgreSQL.
 
-## Stack
+## Features
 
-- React 18 + TypeScript (strict mode)
-- Vite
-- React Router v6
-- TanStack Query v5
-- Zustand
-- React Hook Form + Zod
-- Axios
-- Tabler UI (`@tabler/core` + `@tabler/icons-react`)
-- MSW for local API mocking
+- 🔐 **Authentication** - JWT-based authentication with refresh tokens
+- 👥 **Client Management** - Track clients with contact information
+- 💼 **Job Management** - Create and track jobs through their lifecycle
+- 📋 **Line Items** - Detailed costing with categories (labour, materials, equipment, etc.)
+- 📄 **Quotes** - Generate quotes from jobs
+- 💵 **Invoices** - Create and track invoices with payment status
+- 📊 **Dashboard** - Overview of active jobs, revenue, and outstanding invoices
+- 🔢 **Automatic Numbering** - Sequential quote and invoice numbers
+- 💱 **Currency Handling** - Precise currency calculations (stored as pence/cents)
+- 🧮 **Margin Tracking** - Automatic profit margin calculations
 
-## Setup
+## Tech Stack
 
-### Local Development
+### Backend
+- **TypeScript** - Type-safe JavaScript
+- **Express** - Web framework
+- **TypeORM** - ORM for PostgreSQL
+- **PostgreSQL** - Database
+- **JWT** - Authentication
+- **bcrypt** - Password hashing
+- **Zod** - Schema validation
 
-```bash
-npm install
-npm run dev
-```
+### Frontend
+- **React** - UI framework
+- **TypeScript** - Type safety
+- **React Router** - Navigation
+- **React Query** - Server state management
+- **Zustand** - Client state management
+- **Axios** - HTTP client
+- **Tabler** - UI components
+- **Vite** - Build tool
 
-The app runs with MSW enabled in development and intercepts `/api/*` requests with mock handlers.
+## Quick Start with Docker
 
-### Docker Deployment
+### Prerequisites
+- Docker and Docker Compose installed
 
-The application is containerized using a multi-stage `Dockerfile` and can be easily managed with `docker-compose`.
+### Running with Docker Compose
 
-#### Prerequisites
+1. Clone the repository:
+\`\`\`bash
+git clone https://github.com/Jobrythm/jobrythm-fullstack.git
+cd jobrythm-fullstack
+\`\`\`
 
-- [Docker](https://www.docker.com/get-started)
-- [Docker Compose](https://docs.docker.com/compose/install/)
+2. Start the application:
+\`\`\`bash
+docker-compose up --build
+\`\`\`
 
-#### Running with Docker Compose
+3. Access the application at http://localhost:8080
 
-By default, the application will be available at `http://localhost:3000`.
+4. Login with default admin credentials:
+   - Email: \`admin@example.com\`
+   - Password: \`adminpassword\`
 
-1. **Build and start the container:**
+**⚠️ IMPORTANT: Change this password immediately in production!**
 
-   ```bash
-   docker-compose up -d --build
-   ```
+## Default Admin Account
 
-2. **Access the application:**
-   Open your browser and navigate to [http://localhost:3000](http://localhost:3000).
+On first run, the application creates a default admin account:
+- Email: \`admin@example.com\`
+- Password: \`adminpassword\`
 
-#### Configuration & Port Forwarding
+## API Endpoints
 
-The application uses the following default port mappings and environment variables, which can be customized in the `docker-compose.yml` or via a `.env` file:
+### Authentication
+- \`POST /api/auth/register\` - Register new user
+- \`POST /api/auth/login\` - Login
+- \`POST /api/auth/refresh\` - Refresh access token
+- \`POST /api/auth/logout\` - Logout
 
-- **Port Forwarding:** `3000:80` (HOST:CONTAINER). The Nginx server inside the container listens on port `80`, and it's mapped to port `3000` on your host machine.
-- **API_URL:** The backend API address used by the Nginx proxy (default: `https://api.jobrythm.aricummings.com`).
-- **VITE_API_URL:** The base path for API calls from the frontend (default: `/api`).
-- **HOST_PORT:** Customize the host port (default: `3000`).
+### Users
+- \`GET /api/users/me\` - Get current user profile
+- \`PUT /api/users/me\` - Update profile
 
-Example using a `.env` file:
-```env
-HOST_PORT=4000
-API_URL=https://your-api-endpoint.com
-```
+### Clients
+- \`GET /api/clients\` - List clients (paginated, searchable)
+- \`GET /api/clients/:id\` - Get client details
+- \`POST /api/clients\` - Create client
+- \`PUT /api/clients/:id\` - Update client
+- \`DELETE /api/clients/:id\` - Delete client
 
-#### Manual Docker Build
+### Jobs
+- \`GET /api/jobs\` - List jobs (paginated, filterable)
+- \`GET /api/jobs/:id\` - Get job details
+- \`POST /api/jobs\` - Create job
+- \`PUT /api/jobs/:id\` - Update job
+- \`PATCH /api/jobs/:id/status\` - Update job status
+- \`DELETE /api/jobs/:id\` - Delete job
 
-If you prefer to build the image manually:
+### Line Items
+- \`POST /api/jobs/:jobId/line-items\` - Create line item
+- \`PUT /api/line-items/:id\` - Update line item
+- \`DELETE /api/line-items/:id\` - Delete line item
 
-```bash
-docker build -t jobrythm-frontend .
+### Quotes
+- \`GET /api/quotes\` - List quotes (paginated)
+- \`GET /api/quotes/:id\` - Get quote details
+- \`POST /api/quotes\` - Create quote
+- \`PUT /api/quotes/:id\` - Update quote
+- \`POST /api/quotes/:id/send\` - Send quote via email
+- \`GET /api/quotes/:id/pdf\` - Download quote PDF
 
-# Run with custom API URL
-docker run -d -p 3000:80 -e API_URL=https://api.jobrythm.aricummings.com --name jobrythm jobrythm-frontend
-```
+### Invoices
+- \`GET /api/invoices\` - List invoices (paginated)
+- \`GET /api/invoices/:id\` - Get invoice details
+- \`POST /api/invoices\` - Create invoice
+- \`PUT /api/invoices/:id\` - Update invoice
+- \`PATCH /api/invoices/:id/paid\` - Mark invoice as paid
+- \`POST /api/invoices/:id/send\` - Send invoice via email
+- \`GET /api/invoices/:id/pdf\` - Download invoice PDF
 
-## Build
+### Dashboard
+- \`GET /api/dashboard\` - Get dashboard statistics
 
-```bash
-npm run build
-npm run preview
-```
+## License
+
+MIT License - see LICENSE file for details
