@@ -1,12 +1,4 @@
 import { DataSource } from 'typeorm';
-import { User } from '../entities/User.js';
-import { Client } from '../entities/Client.js';
-import { Job } from '../entities/Job.js';
-import { LineItem } from '../entities/LineItem.js';
-import { Quote } from '../entities/Quote.js';
-import { Invoice } from '../entities/Invoice.js';
-import { RefreshToken } from '../entities/RefreshToken.js';
-import { NumberSequence } from '../entities/NumberSequence.js';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -19,7 +11,7 @@ export const AppDataSource = new DataSource({
   // For production with sensitive data, use migrations instead
   synchronize: true,
   logging: process.env.NODE_ENV === 'development',
-  entities: [User, Client, Job, LineItem, Quote, Invoice, RefreshToken, NumberSequence],
+  entities: ['dist/entities/**/*.js'],
   migrations: [],
   subscribers: [],
 });
