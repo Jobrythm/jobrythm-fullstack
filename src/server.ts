@@ -17,8 +17,10 @@ import jobsRoutes from './routes/jobs.js';
 import quotesRoutes from './routes/quotes.js';
 import invoicesRoutes from './routes/invoices.js';
 import dashboardRoutes from './routes/dashboard.js';
+import adminRoutes from './routes/admin.js';
 import { User } from './entities/User.js';
 import { hashPassword } from './utils/auth.js';
+import { SubscriptionPlan } from './types/enums.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -84,6 +86,7 @@ app.use('/api/jobs', apiLimiter, jobsRoutes);
 app.use('/api/quotes', apiLimiter, quotesRoutes);
 app.use('/api/invoices', apiLimiter, invoicesRoutes);
 app.use('/api/dashboard', apiLimiter, dashboardRoutes);
+app.use('/api/admin', apiLimiter, adminRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {
@@ -147,6 +150,7 @@ async function seedAdminUser() {
         email: adminEmail,
         passwordHash,
         fullName: 'Admin',
+        plan: SubscriptionPlan.ADMIN,
       });
 
       await userRepository.save(admin);

@@ -8,6 +8,17 @@ export interface User {
   createdAt: string;
 }
 
+export interface AdminUser {
+  id: string;
+  email: string;
+  fullName: string;
+  companyName: string | null;
+  plan: 'starter' | 'pro' | 'team' | 'admin';
+  createdAt: string;
+}
+
+export type AdminUserPlan = AdminUser['plan'];
+
 export interface Client {
   id: string;
   name: string;

@@ -1,0 +1,43 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { adminCreateUser, adminDeleteUser, adminGetUsers, adminUpdateUser } from '../../../api/admin';
+import type { CreateUserPayload, UpdateUserPayload } from '../../../api/admin';
+
+export const adminUsersQueryKey = ['admin', 'users'] as const;
+
+export const useAdminUsers = () => {
+  return useQuery({
+    queryKey: adminUsersQueryKey,
+    queryFn: adminGetUsers,
+  });
+};
+
+export const useAdminCreateUser = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CreateUserPayload) => adminCreateUser(payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: adminUsersQueryKey });
+    },
+  });
+};
+
+export const useAdminUpdateUser = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: UpdateUserPayload }) =>
+      adminUpdateUser(id, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: adminUsersQueryKey });
+    },
+  });
+};
+
+export const useAdminDeleteUser = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => adminDeleteUser(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: adminUsersQueryKey });
+    },
+  });
+};

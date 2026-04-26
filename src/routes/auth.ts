@@ -69,7 +69,8 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
       user: {
         id: user.id,
         email: user.email,
-        fullName: user.fullName,
+        name: user.fullName,
+        plan: user.plan,
       },
       session: {
         accessToken,
@@ -130,7 +131,8 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       user: {
         id: user.id,
         email: user.email,
-        fullName: user.fullName,
+        name: user.fullName,
+        plan: user.plan,
       },
       session: {
         accessToken,

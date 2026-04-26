@@ -22,7 +22,7 @@ router.get('/me', async (req: AuthRequest, res: Response): Promise<void> => {
     res.json({
       id: user.id,
       email: user.email,
-      fullName: user.fullName,
+      name: user.fullName,
       companyName: user.companyName,
       companyAddress: user.companyAddress,
       logoUrl: user.logoUrl,
@@ -50,6 +50,7 @@ router.put('/me', async (req: AuthRequest, res: Response): Promise<void> => {
     }
 
     const {
+      name,
       fullName,
       companyName,
       companyAddress,
@@ -58,7 +59,8 @@ router.put('/me', async (req: AuthRequest, res: Response): Promise<void> => {
       defaultQuoteValidityDays,
     } = req.body;
 
-    if (fullName !== undefined) user.fullName = fullName;
+    const resolvedName = name ?? fullName;
+    if (resolvedName !== undefined) user.fullName = resolvedName;
     if (companyName !== undefined) user.companyName = companyName;
     if (companyAddress !== undefined) user.companyAddress = companyAddress;
     if (defaultVatRate !== undefined) user.defaultVatRate = defaultVatRate;
@@ -71,13 +73,14 @@ router.put('/me', async (req: AuthRequest, res: Response): Promise<void> => {
     res.json({
       id: user.id,
       email: user.email,
-      fullName: user.fullName,
+      name: user.fullName,
       companyName: user.companyName,
       companyAddress: user.companyAddress,
       logoUrl: user.logoUrl,
       defaultVatRate: user.defaultVatRate,
       defaultPaymentTerms: user.defaultPaymentTerms,
       defaultQuoteValidityDays: user.defaultQuoteValidityDays,
+      plan: user.plan,
     });
   } catch (error) {
     console.error('Update user error:', error);

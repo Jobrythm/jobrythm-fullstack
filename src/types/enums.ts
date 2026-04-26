@@ -1,7 +1,8 @@
 export enum SubscriptionPlan {
-  STARTER = 'Starter',
-  PRO = 'Pro',
-  TEAM = 'Team',
+  STARTER = 'starter',
+  PRO = 'pro',
+  TEAM = 'team',
+  ADMIN = 'admin',
 }
 
 export enum JobStatus {
