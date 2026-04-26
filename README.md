@@ -51,16 +51,41 @@ cd jobrythm-fullstack
 
 2. Start the application:
 \`\`\`bash
-docker-compose up --build
+docker compose up -d --build
 \`\`\`
 
-3. Access the application at http://localhost:8080
+3. Wait for the database to initialize and tables to be created (first run may take a minute)
 
-4. Login with default admin credentials:
+4. Access the application at http://localhost:8080
+
+5. Login with default admin credentials:
    - Email: \`admin@example.com\`
    - Password: \`adminpassword\`
 
 **⚠️ IMPORTANT: Change this password immediately in production!**
+
+### Checking Logs
+
+To view application logs:
+\`\`\`bash
+docker compose logs -f app
+\`\`\`
+
+To check if containers are running:
+\`\`\`bash
+docker compose ps
+\`\`\`
+
+### Stopping the Application
+
+\`\`\`bash
+docker compose down
+\`\`\`
+
+To stop and remove all data (including database):
+\`\`\`bash
+docker compose down -v
+\`\`\`
 
 ## Default Admin Account
 

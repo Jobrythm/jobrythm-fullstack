@@ -15,7 +15,9 @@ export const AppDataSource = new DataSource({
   username: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || 'postgres',
   database: process.env.DB_NAME || 'jobrythm',
-  synchronize: process.env.NODE_ENV !== 'production', // Auto-create tables in dev
+  // Enable synchronize for Docker deployments (auto-create tables)
+  // For production with sensitive data, use migrations instead
+  synchronize: true,
   logging: process.env.NODE_ENV === 'development',
   entities: [User, Client, Job, LineItem, Quote, Invoice, RefreshToken, NumberSequence],
   migrations: [],
