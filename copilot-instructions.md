@@ -182,6 +182,15 @@ export function useCreateEntity() {
 - **RefreshToken**: JWT refresh token storage
 - **NumberSequence**: Auto-incrementing sequences (QT0001, INV0001)
 
+### Schema Management
+
+**TypeORM Synchronize**: Currently enabled (`synchronize: true`) for Docker deployments. This automatically creates/updates database tables on application startup.
+
+**⚠️ Important**: 
+- Auto-synchronize is suitable for development and single-instance self-hosted deployments
+- For production systems with multiple instances or sensitive data, use proper database migrations
+- TypeORM will automatically create tables based on entity definitions on first run
+
 ### Relationships
 - User → many Clients, Jobs, RefreshTokens
 - Client → many Jobs
