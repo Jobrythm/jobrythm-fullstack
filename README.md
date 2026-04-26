@@ -56,9 +56,14 @@ docker compose up -d --build
 
 3. Wait for the database to initialize and tables to be created (first run may take a minute)
 
-4. Access the application at http://localhost:8080
+4. Test the deployment (optional):
+\`\`\`bash
+./test-deployment.sh
+\`\`\`
 
-5. Login with default admin credentials:
+5. Access the application at http://localhost:8080
+
+6. Login with default admin credentials:
    - Email: \`admin@example.com\`
    - Password: \`adminpassword\`
 

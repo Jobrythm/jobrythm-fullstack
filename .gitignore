@@ -39,3 +39,6 @@ Thumbs.db
 # Testing
 coverage/
 .nyc_output/
+
+# Shell scripts (keep test-deployment.sh)
+!test-deployment.sh
