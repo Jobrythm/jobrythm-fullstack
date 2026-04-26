@@ -2,13 +2,9 @@ import { Router, Response } from 'express';
 import { AppDataSource } from '../config/database.js';
 import { Job } from '../entities/Job.js';
 import { LineItem } from '../entities/LineItem.js';
-import { Quote } from '../entities/Quote.js';
-import { Invoice } from '../entities/Invoice.js';
-import { NumberSequence } from '../entities/NumberSequence.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
-import { JobStatus, QuoteStatus, InvoiceStatus } from '../types/enums.js';
+import { JobStatus } from '../types/enums.js';
 import { Like } from 'typeorm';
-import { addDays } from 'date-fns';
 
 const router = Router();
 
@@ -59,7 +55,7 @@ router.get('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const jobRepository = AppDataSource.getRepository(Job);
     const job = await jobRepository.findOne({
-      where: { id: req.params.id, userId: req.user!.userId },
+      where: { id: String(req.params.id), userId: req.user!.userId },
       relations: ['client', 'lineItems', 'quote', 'invoice'],
     });
 
@@ -110,7 +106,7 @@ router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const jobRepository = AppDataSource.getRepository(Job);
     const job = await jobRepository.findOne({
-      where: { id: req.params.id, userId: req.user!.userId },
+      where: { id: String(req.params.id), userId: req.user!.userId },
     });
 
     if (!job) {
@@ -140,7 +136,7 @@ router.patch('/:id/status', async (req: AuthRequest, res: Response): Promise<voi
   try {
     const jobRepository = AppDataSource.getRepository(Job);
     const job = await jobRepository.findOne({
-      where: { id: req.params.id, userId: req.user!.userId },
+      where: { id: String(req.params.id), userId: req.user!.userId },
     });
 
     if (!job) {
@@ -170,7 +166,7 @@ router.delete('/:id', async (req: AuthRequest, res: Response): Promise<void> => 
   try {
     const jobRepository = AppDataSource.getRepository(Job);
     const job = await jobRepository.findOne({
-      where: { id: req.params.id, userId: req.user!.userId },
+      where: { id: String(req.params.id), userId: req.user!.userId },
     });
 
     if (!job) {
@@ -194,7 +190,7 @@ router.post('/:jobId/line-items', async (req: AuthRequest, res: Response): Promi
   try {
     const jobRepository = AppDataSource.getRepository(Job);
     const job = await jobRepository.findOne({
-      where: { id: req.params.jobId, userId: req.user!.userId },
+      where: { id: String(req.params.jobId), userId: req.user!.userId },
     });
 
     if (!job) {
@@ -234,7 +230,7 @@ router.put('/line-items/:id', async (req: AuthRequest, res: Response): Promise<v
   try {
     const lineItemRepository = AppDataSource.getRepository(LineItem);
     const lineItem = await lineItemRepository.findOne({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       relations: ['job'],
     });
 
@@ -266,7 +262,7 @@ router.delete('/line-items/:id', async (req: AuthRequest, res: Response): Promis
   try {
     const lineItemRepository = AppDataSource.getRepository(LineItem);
     const lineItem = await lineItemRepository.findOne({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       relations: ['job'],
     });
 

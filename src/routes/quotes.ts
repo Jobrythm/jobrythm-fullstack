@@ -5,7 +5,6 @@ import { Quote } from '../entities/Quote.js';
 import { User } from '../entities/User.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 import { QuoteStatus } from '../types/enums.js';
-import { Like } from 'typeorm';
 import { addDays } from 'date-fns';
 import { getNextNumber } from '../utils/numberSequence.js';
 import { calculateTotals } from '../utils/calculations.js';

@@ -4,7 +4,7 @@ import { Job } from '../entities/Job.js';
 import { Quote } from '../entities/Quote.js';
 import { Invoice } from '../entities/Invoice.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
-import { JobStatus, QuoteStatus, InvoiceStatus } from '../types/enums.js';
+import { JobStatus, InvoiceStatus } from '../types/enums.js';
 import { startOfMonth, endOfMonth } from 'date-fns';
 
 const router = Router();

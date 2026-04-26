@@ -48,7 +48,7 @@ router.get('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const clientRepository = AppDataSource.getRepository(Client);
     const client = await clientRepository.findOne({
-      where: { id: req.params.id, userId: req.user!.userId },
+      where: { id: String(req.params.id), userId: req.user!.userId },
       relations: ['jobs'],
     });
 
@@ -97,7 +97,7 @@ router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const clientRepository = AppDataSource.getRepository(Client);
     const client = await clientRepository.findOne({
-      where: { id: req.params.id, userId: req.user!.userId },
+      where: { id: String(req.params.id), userId: req.user!.userId },
     });
 
     if (!client) {
@@ -126,7 +126,7 @@ router.delete('/:id', async (req: AuthRequest, res: Response): Promise<void> => 
   try {
     const clientRepository = AppDataSource.getRepository(Client);
     const client = await clientRepository.findOne({
-      where: { id: req.params.id, userId: req.user!.userId },
+      where: { id: String(req.params.id), userId: req.user!.userId },
     });
 
     if (!client) {
