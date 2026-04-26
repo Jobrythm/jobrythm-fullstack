@@ -28,7 +28,19 @@ const PORT = parseInt(process.env.PORT || '8080');
 
 // Security middleware
 app.use(helmet({
-  contentSecurityPolicy: false, // Allow inline scripts for frontend
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
 }));
 
 // CORS
@@ -57,14 +69,21 @@ const authLimiter = rateLimit({
   message: 'Too many requests, please try again later',
 });
 
+// Rate limiting for API endpoints (more generous)
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 100, // 100 requests per minute
+  message: 'Too many requests, please try again later',
+});
+
 // API Routes
 app.use('/api/auth', authLimiter, authRoutes);
-app.use('/api/users', usersRoutes);
-app.use('/api/clients', clientsRoutes);
-app.use('/api/jobs', jobsRoutes);
-app.use('/api/quotes', quotesRoutes);
-app.use('/api/invoices', invoicesRoutes);
-app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/users', apiLimiter, usersRoutes);
+app.use('/api/clients', apiLimiter, clientsRoutes);
+app.use('/api/jobs', apiLimiter, jobsRoutes);
+app.use('/api/quotes', apiLimiter, quotesRoutes);
+app.use('/api/invoices', apiLimiter, invoicesRoutes);
+app.use('/api/dashboard', apiLimiter, dashboardRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {
@@ -78,7 +97,12 @@ app.use(express.static(publicPath));
 // Serve frontend for all non-API routes
 app.get('*', (req, res) => {
   if (!req.path.startsWith('/api')) {
-    res.sendFile(path.join(publicPath, 'index.html'));
+    const indexPath = path.join(publicPath, 'index.html');
+    res.sendFile(indexPath, (err) => {
+      if (err) {
+        res.status(404).json({ error: 'Not found' });
+      }
+    });
   } else {
     res.status(404).json({ error: 'Not found' });
   }

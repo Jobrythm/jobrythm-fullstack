@@ -32,7 +32,8 @@ export const resolveApiBaseUrl = (): string => {
   if (host.includes('aricummings')) {
     return JOBRYTHM_API_BASE_URLS[1];
   }
-  if (host.includes('jobrythm.com')) {
+  // Use endsWith for more secure domain matching
+  if (host.endsWith('jobrythm.com') || host === 'jobrythm.com') {
     return JOBRYTHM_API_BASE_URLS[2];
   }
 
