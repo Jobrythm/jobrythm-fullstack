@@ -1,5 +1,5 @@
 # Build stage - Frontend
-FROM node:22-alpine AS frontend-builder
+FROM node:22-slim AS frontend-builder
 
 WORKDIR /app/frontend
 
@@ -14,9 +14,12 @@ COPY frontend/ ./
 RUN npm run build
 
 # Build stage - Backend
-FROM node:22-alpine AS backend-builder
+FROM node:22-slim AS backend-builder
 
 WORKDIR /app
+
+# Install build dependencies for native modules (bcrypt)
+RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 # Copy backend package files
 COPY package*.json ./
@@ -29,14 +32,19 @@ COPY tsconfig.json ./
 # Build backend
 RUN npm run build
 
+# Prune dev dependencies
+RUN npm prune --production
+
 # Runtime stage
-FROM node:22-alpine
+FROM node:22-slim
 
 WORKDIR /app
 
-# Install production dependencies only
+# Copy package files
 COPY package*.json ./
-RUN npm ci --only=production
+
+# Copy node_modules from builder (already has production deps)
+COPY --from=backend-builder /app/node_modules ./node_modules
 
 # Copy built backend
 COPY --from=backend-builder /app/dist ./dist

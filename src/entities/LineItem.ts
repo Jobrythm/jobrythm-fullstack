@@ -1,6 +1,6 @@
-import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn, Relation } from 'typeorm';
 import { BaseEntity } from './BaseEntity.js';
-import { Job } from './Job.js';
+import type { Job } from './Job.js';
 import { LineItemCategory } from '../types/enums.js';
 
 @Entity('line_items')
@@ -8,9 +8,9 @@ export class LineItem extends BaseEntity {
   @Column()
   jobId!: string;
 
-  @ManyToOne(() => Job, (job) => job.lineItems, { onDelete: 'CASCADE' })
+  @ManyToOne('Job', 'lineItems', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'jobId' })
-  job!: Job;
+  job!: Relation<Job>;
 
   @Column()
   description!: string;
