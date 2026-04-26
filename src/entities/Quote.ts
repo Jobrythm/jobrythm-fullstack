@@ -1,6 +1,6 @@
-import { Entity, Column, OneToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, OneToOne, JoinColumn, Relation } from 'typeorm';
 import { BaseEntity } from './BaseEntity.js';
-import { Job } from './Job.js';
+import type { Job } from './Job.js';
 import { QuoteStatus } from '../types/enums.js';
 
 @Entity('quotes')
@@ -8,9 +8,9 @@ export class Quote extends BaseEntity {
   @Column()
   jobId!: string;
 
-  @OneToOne(() => Job, (job) => job.quote)
+  @OneToOne('Job', 'quote')
   @JoinColumn({ name: 'jobId' })
-  job!: Job;
+  job!: Relation<Job>;
 
   @Column({ unique: true })
   quoteNumber!: string;

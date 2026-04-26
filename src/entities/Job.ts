@@ -1,10 +1,10 @@
-import { Entity, Column, ManyToOne, OneToMany, OneToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, ManyToOne, OneToMany, OneToOne, JoinColumn, Relation } from 'typeorm';
 import { BaseEntity } from './BaseEntity.js';
-import { User } from './User.js';
-import { Client } from './Client.js';
-import { LineItem } from './LineItem.js';
-import { Quote } from './Quote.js';
-import { Invoice } from './Invoice.js';
+import type { User } from './User.js';
+import type { Client } from './Client.js';
+import type { LineItem } from './LineItem.js';
+import type { Quote } from './Quote.js';
+import type { Invoice } from './Invoice.js';
 import { JobStatus } from '../types/enums.js';
 
 @Entity('jobs')
@@ -12,16 +12,16 @@ export class Job extends BaseEntity {
   @Column()
   userId!: string;
 
-  @ManyToOne(() => User, (user) => user.jobs)
+  @ManyToOne('User', 'jobs')
   @JoinColumn({ name: 'userId' })
-  user!: User;
+  user!: Relation<User>;
 
   @Column()
   clientId!: string;
 
-  @ManyToOne(() => Client, (client) => client.jobs)
+  @ManyToOne('Client', 'jobs')
   @JoinColumn({ name: 'clientId' })
-  client!: Client;
+  client!: Relation<Client>;
 
   @Column()
   title!: string;
@@ -38,14 +38,14 @@ export class Job extends BaseEntity {
   @Column({ nullable: true })
   endDate?: Date;
 
-  @OneToMany(() => LineItem, (lineItem) => lineItem.job, { cascade: true })
-  lineItems!: LineItem[];
+  @OneToMany('LineItem', 'job', { cascade: true })
+  lineItems!: Relation<LineItem[]>;
 
-  @OneToOne(() => Quote, (quote) => quote.job, { nullable: true })
-  quote?: Quote;
+  @OneToOne('Quote', 'job', { nullable: true })
+  quote?: Relation<Quote>;
 
-  @OneToOne(() => Invoice, (invoice) => invoice.job, { nullable: true })
-  invoice?: Invoice;
+  @OneToOne('Invoice', 'job', { nullable: true })
+  invoice?: Relation<Invoice>;
 
   get totalCost(): number {
     return this.lineItems?.reduce((sum, item) => sum + item.totalCost, 0) || 0;

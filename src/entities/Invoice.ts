@@ -1,6 +1,6 @@
-import { Entity, Column, OneToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, OneToOne, JoinColumn, Relation } from 'typeorm';
 import { BaseEntity } from './BaseEntity.js';
-import { Job } from './Job.js';
+import type { Job } from './Job.js';
 import { InvoiceStatus } from '../types/enums.js';
 
 @Entity('invoices')
@@ -8,9 +8,9 @@ export class Invoice extends BaseEntity {
   @Column()
   jobId!: string;
 
-  @OneToOne(() => Job, (job) => job.invoice)
+  @OneToOne('Job', 'invoice')
   @JoinColumn({ name: 'jobId' })
-  job!: Job;
+  job!: Relation<Job>;
 
   @Column({ unique: true })
   invoiceNumber!: string;

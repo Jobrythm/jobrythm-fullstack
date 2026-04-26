@@ -1,16 +1,16 @@
-import { Entity, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
+import { Entity, Column, ManyToOne, OneToMany, JoinColumn, Relation } from 'typeorm';
 import { BaseEntity } from './BaseEntity.js';
-import { User } from './User.js';
-import { Job } from './Job.js';
+import type { User } from './User.js';
+import type { Job } from './Job.js';
 
 @Entity('clients')
 export class Client extends BaseEntity {
   @Column()
   userId!: string;
 
-  @ManyToOne(() => User, (user) => user.clients)
+  @ManyToOne('User', 'clients')
   @JoinColumn({ name: 'userId' })
-  user!: User;
+  user!: Relation<User>;
 
   @Column()
   name!: string;
@@ -24,6 +24,6 @@ export class Client extends BaseEntity {
   @Column({ nullable: true, type: 'text' })
   address?: string;
 
-  @OneToMany(() => Job, (job) => job.client)
-  jobs!: Job[];
+  @OneToMany('Job', 'client')
+  jobs!: Relation<Job[]>;
 }

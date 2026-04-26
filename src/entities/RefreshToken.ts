@@ -1,15 +1,15 @@
-import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn, Relation } from 'typeorm';
 import { BaseEntity } from './BaseEntity.js';
-import { User } from './User.js';
+import type { User } from './User.js';
 
 @Entity('refresh_tokens')
 export class RefreshToken extends BaseEntity {
   @Column()
   userId!: string;
 
-  @ManyToOne(() => User, (user) => user.refreshTokens)
+  @ManyToOne('User', 'refreshTokens')
   @JoinColumn({ name: 'userId' })
-  user!: User;
+  user!: Relation<User>;
 
   @Column({ unique: true })
   tokenHash!: string;

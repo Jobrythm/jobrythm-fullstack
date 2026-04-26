@@ -1,8 +1,8 @@
-import { Entity, Column, OneToMany } from 'typeorm';
+import { Entity, Column, OneToMany, Relation } from 'typeorm';
 import { BaseEntity } from './BaseEntity.js';
-import { Client } from './Client.js';
-import { Job } from './Job.js';
-import { RefreshToken } from './RefreshToken.js';
+import type { Client } from './Client.js';
+import type { Job } from './Job.js';
+import type { RefreshToken } from './RefreshToken.js';
 import { SubscriptionPlan } from '../types/enums.js';
 
 @Entity('users')
@@ -46,12 +46,12 @@ export class User extends BaseEntity {
   @Column({ nullable: true })
   subscriptionEndsAt?: Date;
 
-  @OneToMany(() => Client, (client) => client.user)
-  clients!: Client[];
+  @OneToMany('Client', 'user')
+  clients!: Relation<Client[]>;
 
-  @OneToMany(() => Job, (job) => job.user)
-  jobs!: Job[];
+  @OneToMany('Job', 'user')
+  jobs!: Relation<Job[]>;
 
-  @OneToMany(() => RefreshToken, (token) => token.user)
-  refreshTokens!: RefreshToken[];
+  @OneToMany('RefreshToken', 'user')
+  refreshTokens!: Relation<RefreshToken[]>;
 }
