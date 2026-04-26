@@ -6,7 +6,14 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
   const { data } = await apiClient.get<DashboardResponse | DashboardStats>('/dashboard');
   const maybeStats = data as Partial<DashboardStats>;
   if (typeof maybeStats.activeJobs === 'number' && typeof maybeStats.quotesThisMonth === 'number') {
-    return maybeStats as DashboardStats;
+    return {
+      activeJobs: maybeStats.activeJobs,
+      quotesThisMonth: maybeStats.quotesThisMonth,
+      revenueThisMonth: maybeStats.revenueThisMonth ?? 0,
+      outstandingInvoices: maybeStats.outstandingInvoices ?? 0,
+      recentJobs: maybeStats.recentJobs ?? [],
+      recentActivity: maybeStats.recentActivity ?? [],
+    };
   }
   if ('data' in (data as DashboardResponse) || 'widgets' in (data as DashboardResponse)) {
     const wrapped = data as DashboardResponse;

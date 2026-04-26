@@ -73,12 +73,20 @@ router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
       take: 10,
     });
 
+    const recentActivity = recentJobs.map((job) => ({
+      id: job.id,
+      type: 'job_created' as const,
+      description: job.title,
+      createdAt: job.createdAt,
+    }));
+
     res.json({
       activeJobs: activeJobsCount,
       quotesThisMonth,
       revenueThisMonth,
-      outstandingAmount,
-      recentActivity: recentJobs,
+      outstandingInvoices: outstandingAmount,
+      recentJobs,
+      recentActivity,
     });
   } catch (error) {
     console.error('Get dashboard error:', error);
