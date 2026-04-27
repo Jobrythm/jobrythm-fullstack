@@ -6,7 +6,7 @@
 export const JOBRYTHM_API_BASE_URLS = [
   'http://localhost:8080/api',
   'https://api.jobrythm.aricummings.com/api',
-  'https://api.jobrythm.com/api',
+  'https://api.jobrythm.app/api',
 ] as const;
 
 const normalizeBase = (url: string) => url.replace(/\/$/, '');
@@ -33,7 +33,7 @@ export const resolveApiBaseUrl = (): string => {
     return JOBRYTHM_API_BASE_URLS[1];
   }
   // Use endsWith for more secure domain matching
-  if (host.endsWith('jobrythm.com') || host === 'jobrythm.com') {
+  if (host.endsWith('jobrythm.app') || host === 'jobrythm.app') {
     return JOBRYTHM_API_BASE_URLS[2];
   }
 
