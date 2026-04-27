@@ -15,10 +15,16 @@ async function createTransporterWithConfig() {
     throw new Error('Email is not configured. Set SMTP host, user, and password in Admin → Email settings.');
   }
 
+  const port = config.port ?? 587;
+  // Port 465 uses implicit TLS (secure: true); all other ports (587, 25, etc.)
+  // use STARTTLS (secure: false). Deriving from port avoids the
+  // "wrong version number" SSL error caused by misconfigured smtp_secure settings.
+  const secure = port === 465;
+
   const transporter = nodemailer.createTransport({
     host: config.host,
-    port: config.port ?? 587,
-    secure: config.secure,
+    port,
+    secure,
     auth: {
       user: config.user,
       pass: config.password,
