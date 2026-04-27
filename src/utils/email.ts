@@ -8,14 +8,14 @@ export interface SendEmailOptions {
   text?: string;
 }
 
-async function createTransporter() {
+async function createTransporterWithConfig() {
   const config = await getEmailConfig();
 
   if (!config.host || !config.user || !config.password) {
     throw new Error('Email is not configured. Set SMTP host, user, and password in Admin → Email settings.');
   }
 
-  return nodemailer.createTransport({
+  const transporter = nodemailer.createTransport({
     host: config.host,
     port: config.port ?? 587,
     secure: config.secure,
@@ -24,15 +24,16 @@ async function createTransporter() {
       pass: config.password,
     },
   });
-}
-
-export async function sendEmail(options: SendEmailOptions): Promise<void> {
-  const config = await getEmailConfig();
-  const transporter = await createTransporter();
 
   const from = config.fromName
     ? `"${config.fromName}" <${config.fromEmail ?? config.user}>`
-    : (config.fromEmail ?? config.user!);
+    : (config.fromEmail ?? config.user);
+
+  return { transporter, from };
+}
+
+export async function sendEmail(options: SendEmailOptions): Promise<void> {
+  const { transporter, from } = await createTransporterWithConfig();
 
   await transporter.sendMail({
     from,
@@ -55,11 +56,11 @@ export async function sendQuoteEmail(
     subject: `Your Quote ${quoteNumber}${company}`,
     html: `
       <p>Hi ${clientName},</p>
-      <p>Please find your quote <strong>${quoteNumber}</strong> attached${company}.</p>
+      <p>Please find your quote <strong>${quoteNumber}</strong> below${company}.</p>
       <p>If you have any questions, please don't hesitate to get in touch.</p>
       <p>Kind regards${companyName ? `,<br>${companyName}` : ''}</p>
     `,
-    text: `Hi ${clientName},\n\nPlease find your quote ${quoteNumber} attached${company}.\n\nIf you have any questions, please don't hesitate to get in touch.\n\nKind regards${companyName ? `\n${companyName}` : ''}`,
+    text: `Hi ${clientName},\n\nPlease find your quote ${quoteNumber} below${company}.\n\nIf you have any questions, please don't hesitate to get in touch.\n\nKind regards${companyName ? `\n${companyName}` : ''}`,
   });
 }
 
@@ -75,10 +76,10 @@ export async function sendInvoiceEmail(
     subject: `Invoice ${invoiceNumber}${company}`,
     html: `
       <p>Hi ${clientName},</p>
-      <p>Please find your invoice <strong>${invoiceNumber}</strong> attached${company}.</p>
+      <p>Please find your invoice <strong>${invoiceNumber}</strong> below${company}.</p>
       <p>If you have any questions, please don't hesitate to get in touch.</p>
       <p>Kind regards${companyName ? `,<br>${companyName}` : ''}</p>
     `,
-    text: `Hi ${clientName},\n\nPlease find your invoice ${invoiceNumber} attached${company}.\n\nIf you have any questions, please don't hesitate to get in touch.\n\nKind regards${companyName ? `\n${companyName}` : ''}`,
+    text: `Hi ${clientName},\n\nPlease find your invoice ${invoiceNumber} below${company}.\n\nIf you have any questions, please don't hesitate to get in touch.\n\nKind regards${companyName ? `\n${companyName}` : ''}`,
   });
 }
