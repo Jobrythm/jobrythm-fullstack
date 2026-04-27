@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { AdminUser, AdminUserPlan, AppSettings } from '../types';
+import type { AdminUser, AdminUserPlan, AdminStats, AppSettings } from '../types';
 
 export interface CreateUserPayload {
   email: string;
@@ -52,5 +52,10 @@ export const adminGetSettings = async (): Promise<AppSettings> => {
 
 export const adminUpdateSettings = async (payload: UpdateSettingsPayload): Promise<AppSettings> => {
   const { data } = await apiClient.put<AppSettings>('/admin/settings', payload);
+  return data;
+};
+
+export const adminGetStats = async (): Promise<AdminStats> => {
+  const { data } = await apiClient.get<AdminStats>('/admin/stats');
   return data;
 };

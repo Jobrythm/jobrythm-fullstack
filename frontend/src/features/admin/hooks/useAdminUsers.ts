@@ -3,14 +3,16 @@ import {
   adminCreateUser,
   adminDeleteUser,
   adminGetSettings,
+  adminGetStats,
   adminGetUsers,
   adminUpdateSettings,
   adminUpdateUser,
 } from '../../../api/admin';
 import type { CreateUserPayload, UpdateSettingsPayload, UpdateUserPayload } from '../../../api/admin';
 
-export const adminUsersQueryKey = ['admin', 'users'] as const;
+export const adminUsersQueryKey    = ['admin', 'users']    as const;
 export const adminSettingsQueryKey = ['admin', 'settings'] as const;
+export const adminStatsQueryKey    = ['admin', 'stats']    as const;
 
 export const useAdminUsers = () => {
   return useQuery({
@@ -64,5 +66,12 @@ export const useUpdateAdminSettings = () => {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: adminSettingsQueryKey });
     },
+  });
+};
+
+export const useAdminStats = () => {
+  return useQuery({
+    queryKey: adminStatsQueryKey,
+    queryFn: adminGetStats,
   });
 };

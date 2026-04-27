@@ -1,11 +1,16 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   IconCheck,
+  IconChartBar,
+  IconCurrencyDollar,
   IconEye,
   IconEyeOff,
+  IconFileInvoice,
   IconPlus,
   IconSettings,
   IconShieldLock,
+  IconBriefcase,
+  IconTrendingUp,
   IconTrash,
   IconUser,
   IconUsers,
@@ -19,12 +24,14 @@ import { z } from 'zod';
 import { ApiErrorAlert } from '../../../components/ApiErrorAlert';
 import { ConfirmModal } from '../../../components/ConfirmModal';
 import { TableSkeleton } from '../../../components/TableSkeleton';
+import { LoadingSpinner } from '../../../components/LoadingSpinner';
 import { useAuth } from '../../../hooks/useAuth';
 import type { AdminUser, AdminUserPlan } from '../../../types';
 import {
   useAdminCreateUser,
   useAdminDeleteUser,
   useAdminSettings,
+  useAdminStats,
   useAdminUpdateUser,
   useAdminUsers,
   useUpdateAdminSettings,
@@ -209,6 +216,145 @@ const EditUserModal = ({ user, onClose }: { user: AdminUser; onClose: () => void
               </button>
             </div>
           </form>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── Dashboard stats tab ────────────────────────────────────────────────────────
+const DashboardPanel = () => {
+  const { data: stats, isLoading, isError } = useAdminStats();
+
+  if (isLoading) return <LoadingSpinner />;
+  if (isError || !stats) return <ApiErrorAlert error="Failed to load statistics." />;
+
+  const fmtCurrency = (cents: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(cents / 100);
+
+  const planLabels: Record<string, string> = {
+    starter: 'Starter',
+    professional: 'Professional',
+    business: 'Business',
+  };
+  const planColors: Record<string, string> = {
+    starter: 'bg-secondary',
+    professional: 'bg-primary',
+    business: 'bg-indigo',
+  };
+
+  const totalPlanCustomers = Object.values(stats.planBreakdown).reduce((a, b) => a + b, 0) || 1;
+
+  const statCards = [
+    {
+      label: 'Total customers',
+      value: stats.totalCustomers,
+      sub: 'All paying & free accounts',
+      icon: <IconUsers size={20} />,
+      color: 'bg-primary',
+    },
+    {
+      label: 'New customers (30d)',
+      value: stats.newCustomersLast30d,
+      sub: 'Registered in last 30 days',
+      icon: <IconTrendingUp size={20} />,
+      color: 'bg-green',
+    },
+    {
+      label: 'Revenue (30d)',
+      value: fmtCurrency(stats.revenueLast30dCents),
+      sub: 'From paid invoices',
+      icon: <IconCurrencyDollar size={20} />,
+      color: 'bg-lime',
+    },
+    {
+      label: 'Total revenue',
+      value: fmtCurrency(stats.totalRevenueCents),
+      sub: 'All time, paid invoices',
+      icon: <IconChartBar size={20} />,
+      color: 'bg-teal',
+    },
+    {
+      label: 'Total jobs',
+      value: stats.totalJobs,
+      sub: `${stats.activeJobs} currently active`,
+      icon: <IconBriefcase size={20} />,
+      color: 'bg-orange',
+    },
+    {
+      label: 'Quotes sent (30d)',
+      value: stats.quotesLast30d,
+      sub: 'Created in last 30 days',
+      icon: <IconFileInvoice size={20} />,
+      color: 'bg-azure',
+    },
+    {
+      label: 'Total paid invoices',
+      value: stats.totalPaidInvoices,
+      sub: 'All time',
+      icon: <IconCheck size={20} />,
+      color: 'bg-success',
+    },
+  ];
+
+  return (
+    <div className="row g-3">
+      {/* Stat cards */}
+      {statCards.map(({ label, value, sub, icon, color }) => (
+        <div key={label} className="col-sm-6 col-lg-4">
+          <div className="card card-sm h-100">
+            <div className="card-body">
+              <div className="row align-items-center">
+                <div className="col-auto">
+                  <span className={`${color} text-white avatar`}>{icon}</span>
+                </div>
+                <div className="col">
+                  <div className="h3 mb-0 fw-bold">{value}</div>
+                  <div className="fw-medium text-body">{label}</div>
+                  <div className="text-secondary small">{sub}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+
+      {/* Plan breakdown */}
+      <div className="col-12">
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title mb-0">
+              <IconUsers size={16} className="me-2" />
+              Customers by plan
+            </h3>
+          </div>
+          <div className="card-body">
+            <div className="row g-3">
+              {Object.entries(stats.planBreakdown).map(([plan, count]) => {
+                const pct = Math.round((count / totalPlanCustomers) * 100);
+                return (
+                  <div key={plan} className="col-md-4">
+                    <div className="d-flex justify-content-between mb-1">
+                      <span className={`badge ${planColors[plan] ?? 'bg-secondary'}-lt text-capitalize`}>
+                        {planLabels[plan] ?? plan}
+                      </span>
+                      <span className="text-secondary small">{count} user{count !== 1 ? 's' : ''} · {pct}%</span>
+                    </div>
+                    <div className="progress progress-sm">
+                      <div
+                        className={`progress-bar ${planColors[plan] ?? 'bg-secondary'}`}
+                        style={{ width: `${pct}%` }}
+                        role="progressbar"
+                        aria-valuenow={pct}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -434,7 +580,7 @@ export const AdminPage = () => {
   const { data: users = [], isLoading, isError, error } = useAdminUsers();
   const deleteUser = useAdminDeleteUser();
 
-  const [tab, setTab] = useState<'users' | 'settings'>('users');
+  const [tab, setTab] = useState<'dashboard' | 'users' | 'settings'>('dashboard');
   const [showCreate, setShowCreate] = useState(false);
   const [editTarget, setEditTarget] = useState<AdminUser | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
@@ -479,6 +625,15 @@ export const AdminPage = () => {
           <ul className="nav nav-tabs card-header-tabs">
             <li className="nav-item">
               <button
+                className={`nav-link ${tab === 'dashboard' ? 'active' : ''}`}
+                onClick={() => setTab('dashboard')}
+              >
+                <IconChartBar size={15} className="me-1" />
+                Dashboard
+              </button>
+            </li>
+            <li className="nav-item">
+              <button
                 className={`nav-link ${tab === 'users' ? 'active' : ''}`}
                 onClick={() => setTab('users')}
               >
@@ -498,6 +653,8 @@ export const AdminPage = () => {
           </ul>
         </div>
       </div>
+
+      {tab === 'dashboard' && <DashboardPanel />}
 
       {tab === 'settings' && <StripeSettingsPanel />}
 

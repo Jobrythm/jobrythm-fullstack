@@ -116,6 +116,18 @@ export interface DashboardStats {
   recentActivity: ActivityItem[];
 }
 
+export interface AdminStats {
+  totalCustomers: number;
+  newCustomersLast30d: number;
+  planBreakdown: Record<string, number>;
+  totalJobs: number;
+  activeJobs: number;
+  quotesLast30d: number;
+  totalPaidInvoices: number;
+  totalRevenueCents: number;
+  revenueLast30dCents: number;
+}
+
 export interface AppSettings {
   stripeApiKey: string;
   stripeApiKeySet: boolean;
