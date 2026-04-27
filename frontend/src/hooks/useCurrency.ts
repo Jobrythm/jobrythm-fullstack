@@ -1,6 +1,6 @@
 import { formatCurrency } from '../utils';
 
-export const useCurrency = (currency = 'GBP') => {
+export const useCurrency = (currency = 'USD') => {
   return {
     format: (cents: number) => formatCurrency(cents, currency),
     toCents: (value: number) => Math.round(value * 100),

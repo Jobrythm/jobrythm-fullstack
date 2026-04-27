@@ -6,7 +6,7 @@ interface CurrencyDisplayProps {
   className?: string;
 }
 
-export const CurrencyDisplay = ({ cents, currency = 'GBP', className }: CurrencyDisplayProps) => {
+export const CurrencyDisplay = ({ cents, currency = 'USD', className }: CurrencyDisplayProps) => {
   return <span className={className}>{formatCurrency(cents, currency)}</span>;
 };
 
