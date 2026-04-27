@@ -121,7 +121,8 @@ router.post('/clock-out', async (req: AuthRequest, res: Response): Promise<void>
 router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const repo = AppDataSource.getRepository(TimeEntry);
-    const entry = await repo.findOne({ where: { id: req.params.id, userId: req.user!.userId } });
+    const id = String(req.params.id);
+    const entry = await repo.findOne({ where: { id, userId: req.user!.userId } });
     if (!entry) { res.status(404).json({ error: 'Not found' }); return; }
 
     const { startTime, endTime, description, isBillable, hourlyRateCents, jobId } = req.body;
@@ -146,7 +147,8 @@ router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
 router.delete('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const repo = AppDataSource.getRepository(TimeEntry);
-    const entry = await repo.findOne({ where: { id: req.params.id, userId: req.user!.userId } });
+    const id = String(req.params.id);
+    const entry = await repo.findOne({ where: { id, userId: req.user!.userId } });
     if (!entry) { res.status(404).json({ error: 'Not found' }); return; }
     await repo.remove(entry);
     res.status(204).send();

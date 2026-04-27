@@ -26,6 +26,7 @@ import publicRoutes from './routes/public.js';
 import demoDataRoutes from './routes/demoData.js';
 import appointmentsRoutes from './routes/appointments.js';
 import teamRoutes from './routes/team.js';
+import timeEntriesRoutes from './routes/timeEntries.js';
 import aiRoutes from './routes/ai.js';
 import { User } from './entities/User.js';
 import { hashPassword } from './utils/auth.js';
@@ -107,6 +108,7 @@ app.use('/api/public', apiLimiter, publicRoutes);
 app.use('/api/demo-data', apiLimiter, demoDataRoutes);
 app.use('/api/appointments', apiLimiter, appointmentsRoutes);
 app.use('/api/team', apiLimiter, teamRoutes);
+app.use('/api/time-entries', apiLimiter, timeEntriesRoutes);
 app.use('/api', apiLimiter, aiRoutes);
 
 // Health check

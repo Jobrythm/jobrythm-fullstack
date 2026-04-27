@@ -24,7 +24,8 @@ router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
 router.get('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const repo = AppDataSource.getRepository(TeamMember);
-    const member = await repo.findOne({ where: { id: req.params.id, ownerId: req.user!.userId } });
+    const id = String(req.params.id);
+    const member = await repo.findOne({ where: { id, ownerId: req.user!.userId } });
     if (!member) { res.status(404).json({ error: 'Not found' }); return; }
     res.json(member);
   } catch (error) {
@@ -59,7 +60,8 @@ router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
 router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const repo = AppDataSource.getRepository(TeamMember);
-    const member = await repo.findOne({ where: { id: req.params.id, ownerId: req.user!.userId } });
+    const id = String(req.params.id);
+    const member = await repo.findOne({ where: { id, ownerId: req.user!.userId } });
     if (!member) { res.status(404).json({ error: 'Not found' }); return; }
 
     const { name, email, phone, role, notes, isActive } = req.body;
@@ -81,7 +83,8 @@ router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
 router.delete('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const repo = AppDataSource.getRepository(TeamMember);
-    const member = await repo.findOne({ where: { id: req.params.id, ownerId: req.user!.userId } });
+    const id = String(req.params.id);
+    const member = await repo.findOne({ where: { id, ownerId: req.user!.userId } });
     if (!member) { res.status(404).json({ error: 'Not found' }); return; }
     await repo.remove(member);
     res.status(204).send();

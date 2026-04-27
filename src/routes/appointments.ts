@@ -41,8 +41,9 @@ router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
 router.get('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const repo = AppDataSource.getRepository(Appointment);
+    const id = String(req.params.id);
     const appt = await repo.findOne({
-      where: { id: req.params.id, userId: req.user!.userId },
+      where: { id, userId: req.user!.userId },
       relations: ['job', 'client', 'job.client'],
     });
     if (!appt) { res.status(404).json({ error: 'Not found' }); return; }
@@ -95,7 +96,8 @@ router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
 router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const repo = AppDataSource.getRepository(Appointment);
-    const appt = await repo.findOne({ where: { id: req.params.id, userId: req.user!.userId } });
+    const id = String(req.params.id);
+    const appt = await repo.findOne({ where: { id, userId: req.user!.userId } });
     if (!appt) { res.status(404).json({ error: 'Not found' }); return; }
 
     const { title, description, startTime, endTime, location, jobId, clientId, assignedTo, status } = req.body;
@@ -128,7 +130,8 @@ router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
 router.delete('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const repo = AppDataSource.getRepository(Appointment);
-    const appt = await repo.findOne({ where: { id: req.params.id, userId: req.user!.userId } });
+    const id = String(req.params.id);
+    const appt = await repo.findOne({ where: { id, userId: req.user!.userId } });
     if (!appt) { res.status(404).json({ error: 'Not found' }); return; }
     await repo.remove(appt);
     res.status(204).send();
