@@ -36,9 +36,9 @@ export interface UpdateSettingsPayload {
   smtpPassword?: string;
   smtpFromEmail?: string;
   smtpFromName?: string;
-  // AI / GitHub Models
-  githubModelsToken?: string;
-  githubModelsModel?: string;
+  // AI / Gemini
+  geminiApiKey?: string;
+  geminiModel?: string;
 }
 
 export const adminGetUsers = async (): Promise<AdminUser[]> => {

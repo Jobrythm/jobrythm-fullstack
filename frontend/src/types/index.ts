@@ -158,9 +158,9 @@ export interface AppSettings {
   smtpFromEmail: string;
   smtpFromName: string;
   emailConfigured: boolean;
-  githubModelsToken: string;
-  githubModelsTokenSet: boolean;
-  githubModelsModel: string;
+  geminiApiKey: string;
+  geminiApiKeySet: boolean;
+  geminiModel: string;
   aiConfigured: boolean;
   quickbooksClientId: string;
   quickbooksClientSecret: string;

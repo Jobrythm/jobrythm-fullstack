@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
 import { authenticateToken, requireAdmin, AuthRequest } from '../middleware/auth.js';
-import { getStripeConfig, getEmailConfig, getSetting, setSetting, getGitHubModelsConfig, getIntegrationsConfig } from '../utils/appSettings.js';
+import { getStripeConfig, getEmailConfig, getSetting, setSetting, getGeminiConfig, getIntegrationsConfig } from '../utils/appSettings.js';
 import { sendEmail } from '../utils/email.js';
 
 const router = Router();
@@ -22,7 +22,7 @@ router.get('/', async (_req: AuthRequest, res: Response): Promise<void> => {
       getStripeConfig(),
       getEmailConfig(),
       getSetting('app_url'),
-      getGitHubModelsConfig(),
+      getGeminiConfig(),
       getIntegrationsConfig(),
     ]);
     res.json({
@@ -47,10 +47,10 @@ router.get('/', async (_req: AuthRequest, res: Response): Promise<void> => {
       smtpFromEmail: emailConfig.fromEmail ?? '',
       smtpFromName: emailConfig.fromName ?? '',
       emailConfigured: Boolean(emailConfig.host && emailConfig.user && emailConfig.password),
-      githubModelsToken: maskKey(aiConfig.token),
-      githubModelsTokenSet: Boolean(aiConfig.token),
-      githubModelsModel: aiConfig.model ?? 'gpt-4o',
-      aiConfigured: Boolean(aiConfig.token),
+      geminiApiKey: maskKey(aiConfig.apiKey),
+      geminiApiKeySet: Boolean(aiConfig.apiKey),
+      geminiModel: aiConfig.model ?? 'gemini-2.0-flash',
+      aiConfigured: Boolean(aiConfig.apiKey),
       quickbooksClientId: intConfig.quickbooksClientId ?? '',
       quickbooksClientSecret: maskKey(intConfig.quickbooksClientSecret),
       quickbooksClientSecretSet: Boolean(intConfig.quickbooksClientSecret),
@@ -88,8 +88,8 @@ router.put('/', async (req: AuthRequest, res: Response): Promise<void> => {
       smtpPassword,
       smtpFromEmail,
       smtpFromName,
-      githubModelsToken,
-      githubModelsModel,
+      geminiApiKey,
+      geminiModel,
       quickbooksClientId,
       quickbooksClientSecret,
       quickbooksRedirectUri,
@@ -106,7 +106,7 @@ router.put('/', async (req: AuthRequest, res: Response): Promise<void> => {
     // Secrets: only update if non-empty (blank = keep existing)
     if (stripeApiKey?.trim()) secretUpdates.push(['stripe_api_key', stripeApiKey.trim()]);
     if (stripeWebhookSecret?.trim()) secretUpdates.push(['stripe_webhook_secret', stripeWebhookSecret.trim()]);
-    if (githubModelsToken?.trim()) secretUpdates.push(['github_models_token', githubModelsToken.trim()]);
+    if (geminiApiKey?.trim()) secretUpdates.push(['gemini_api_key', geminiApiKey.trim()]);
 
     // Non-secret Stripe / general settings: always update if provided
     if (stripePublishableKey !== undefined) generalUpdates.push(['stripe_publishable_key', stripePublishableKey.trim() || null]);
@@ -118,7 +118,7 @@ router.put('/', async (req: AuthRequest, res: Response): Promise<void> => {
     if (stripeBusinessMonthlyPriceId !== undefined) generalUpdates.push(['stripe_business_monthly_price_id', stripeBusinessMonthlyPriceId.trim() || null]);
     if (stripeBusinessAnnualPriceId !== undefined) generalUpdates.push(['stripe_business_annual_price_id', stripeBusinessAnnualPriceId.trim() || null]);
     if (appUrl !== undefined) generalUpdates.push(['app_url', appUrl.trim() || null]);
-    if (githubModelsModel !== undefined) generalUpdates.push(['github_models_model', githubModelsModel.trim() || null]);
+    if (geminiModel !== undefined) generalUpdates.push(['gemini_model', geminiModel.trim() || null]);
 
     // Email / SMTP
     if (smtpHost !== undefined) emailUpdates.push(['smtp_host', smtpHost.trim() || null]);
@@ -147,7 +147,7 @@ router.put('/', async (req: AuthRequest, res: Response): Promise<void> => {
       getStripeConfig(),
       getEmailConfig(),
       getSetting('app_url'),
-      getGitHubModelsConfig(),
+      getGeminiConfig(),
       getIntegrationsConfig(),
     ]);
     res.json({
@@ -172,10 +172,10 @@ router.put('/', async (req: AuthRequest, res: Response): Promise<void> => {
       smtpFromEmail: emailConfig.fromEmail ?? '',
       smtpFromName: emailConfig.fromName ?? '',
       emailConfigured: Boolean(emailConfig.host && emailConfig.user && emailConfig.password),
-      githubModelsToken: maskKey(aiConfig.token),
-      githubModelsTokenSet: Boolean(aiConfig.token),
-      githubModelsModel: aiConfig.model ?? 'gpt-4o',
-      aiConfigured: Boolean(aiConfig.token),
+      geminiApiKey: maskKey(aiConfig.apiKey),
+      geminiApiKeySet: Boolean(aiConfig.apiKey),
+      geminiModel: aiConfig.model ?? 'gemini-2.0-flash',
+      aiConfigured: Boolean(aiConfig.apiKey),
       quickbooksClientId: intConfig.quickbooksClientId ?? '',
       quickbooksClientSecret: maskKey(intConfig.quickbooksClientSecret),
       quickbooksClientSecretSet: Boolean(intConfig.quickbooksClientSecret),

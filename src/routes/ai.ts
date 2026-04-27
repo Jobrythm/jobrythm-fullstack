@@ -1,21 +1,41 @@
 import { Router, Response } from 'express';
-import OpenAI from 'openai';
+import { GoogleGenAI } from '@google/genai';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
-import { getGitHubModelsConfig } from '../utils/appSettings.js';
+import { getGeminiConfig } from '../utils/appSettings.js';
 import { AppDataSource } from '../config/database.js';
 import { Job } from '../entities/Job.js';
 
 const router = Router();
 router.use(authenticateToken);
 
+// Helper: build a Gemini client from stored config, or return null
+async function buildAiClient(): Promise<{ ai: GoogleGenAI; model: string } | null> {
+  const config = await getGeminiConfig();
+  if (!config.apiKey) return null;
+  return {
+    ai: new GoogleGenAI({ apiKey: config.apiKey }),
+    model: config.model ?? 'gemini-2.0-flash',
+  };
+}
+
+// Extract JSON from a model response that may be wrapped in markdown code fences
+function extractJson(raw: string): string {
+  const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fenced) return fenced[1].trim();
+  const firstBrace = raw.indexOf('{');
+  const lastBrace = raw.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace > firstBrace) return raw.slice(firstBrace, lastBrace + 1);
+  return raw.trim();
+}
+
 // POST /api/jobs/:id/ai-suggest-line-items
-// Uses GitHub Models (GPT-4o) to suggest line items based on job title/description
+// Uses Gemini to suggest line items based on job title/description
 // and the contractor's recent job history.
 router.post('/jobs/:id/ai-suggest-line-items', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const aiConfig = await getGitHubModelsConfig();
-    if (!aiConfig.token) {
-      res.status(503).json({ error: 'AI features are not configured. Ask your admin to add a GitHub Models token in the admin settings.' });
+    const aiClient = await buildAiClient();
+    if (!aiClient) {
+      res.status(503).json({ error: 'AI features are not configured. Ask your admin to add a Gemini API key in the admin settings.' });
       return;
     }
 
@@ -58,11 +78,6 @@ router.post('/jobs/:id/ai-suggest-line-items', async (req: AuthRequest, res: Res
       })
       .join('\n\n');
 
-    const client = new OpenAI({
-      baseURL: 'https://models.inference.ai.azure.com',
-      apiKey: aiConfig.token,
-    });
-
     const systemPrompt = `You are a helpful assistant for trade contractors (plumbers, HVAC, electricians, handymen). 
 Your task is to suggest appropriate line items for a job quote based on the job description and the contractor's past job history.
 
@@ -86,17 +101,17 @@ ${historySummary ? `Here are some of my recent completed jobs with their line it
 
 Please suggest 3–8 appropriate line items for this job.`;
 
-    const completion = await client.chat.completions.create({
-      model: aiConfig.model ?? 'gpt-4o',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      temperature: 0.3,
-      max_tokens: 1024,
+    const response = await aiClient.ai.models.generateContent({
+      model: aiClient.model,
+      contents: userPrompt,
+      config: {
+        systemInstruction: systemPrompt,
+        temperature: 0.3,
+        maxOutputTokens: 1024,
+      },
     });
 
-    const raw = extractJson(completion.choices[0]?.message?.content ?? '{}');
+    const raw = extractJson(response.text ?? '{}');
     let parsed: { lineItems?: unknown[] };
     try {
       parsed = JSON.parse(raw) as { lineItems?: unknown[] };
@@ -123,7 +138,7 @@ Please suggest 3–8 appropriate line items for this job.`;
       }))
       .filter((item) => item.description.length > 0);
 
-    res.json({ suggestions, model: aiConfig.model ?? 'gpt-4o' });
+    res.json({ suggestions, model: aiClient.model });
   } catch (error) {
     console.error('AI suggest error:', error);
     const msg = error instanceof Error ? error.message : 'Unknown error';
@@ -131,33 +146,13 @@ Please suggest 3–8 appropriate line items for this job.`;
   }
 });
 
-// Helper: build an OpenAI client from stored config, or return null
-async function buildAiClient(): Promise<{ client: OpenAI; model: string } | null> {
-  const aiConfig = await getGitHubModelsConfig();
-  if (!aiConfig.token) return null;
-  return {
-    client: new OpenAI({ baseURL: 'https://models.inference.ai.azure.com', apiKey: aiConfig.token }),
-    model: aiConfig.model ?? 'gpt-4o',
-  };
-}
-
-// Extract JSON from a model response that may be wrapped in markdown code fences
-function extractJson(raw: string): string {
-  const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fenced) return fenced[1].trim();
-  const firstBrace = raw.indexOf('{');
-  const lastBrace = raw.lastIndexOf('}');
-  if (firstBrace !== -1 && lastBrace > firstBrace) return raw.slice(firstBrace, lastBrace + 1);
-  return raw.trim();
-}
-
 // POST /api/ai/suggest-client
 // Parses a plain-English description into structured client fields.
 router.post('/ai/suggest-client', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const ai = await buildAiClient();
-    if (!ai) {
-      res.status(503).json({ error: 'AI features are not configured. Add a GitHub Models token in Admin → AI Settings.' });
+    const aiClient = await buildAiClient();
+    if (!aiClient) {
+      res.status(503).json({ error: 'AI features are not configured. Add a Gemini API key in Admin → AI Settings.' });
       return;
     }
 
@@ -167,12 +162,7 @@ router.post('/ai/suggest-client', async (req: AuthRequest, res: Response): Promi
       return;
     }
 
-    const completion = await ai.client.chat.completions.create({
-      model: ai.model,
-      messages: [
-        {
-          role: 'system',
-          content: `You are a data extraction assistant for a trade contractor CRM.
+    const systemPrompt = `You are a data extraction assistant for a trade contractor CRM.
 Extract structured client/contact information from a plain-English description.
 Return ONLY a valid JSON object with these exact fields (all optional except name):
 - name: string (person or company name)
@@ -183,15 +173,19 @@ Return ONLY a valid JSON object with these exact fields (all optional except nam
 
 Example: {"name":"Smith Plumbing Ltd","email":"info@smithplumbing.com","phone":"07700 900123","address":"12 High Street, London, SW1A 1AA","notes":"Commercial client, prefers morning calls"}
 
-Respond with ONLY the JSON object. Do not wrap in markdown.`,
-        },
-        { role: 'user', content: description.trim() },
-      ],
-      temperature: 0.2,
-      max_tokens: 512,
+Respond with ONLY the JSON object. Do not wrap in markdown.`;
+
+    const response = await aiClient.ai.models.generateContent({
+      model: aiClient.model,
+      contents: description.trim(),
+      config: {
+        systemInstruction: systemPrompt,
+        temperature: 0.2,
+        maxOutputTokens: 512,
+      },
     });
 
-    const raw = extractJson(completion.choices[0]?.message?.content ?? '{}');
+    const raw = extractJson(response.text ?? '{}');
     let parsed: Record<string, unknown>;
     try {
       parsed = JSON.parse(raw) as Record<string, unknown>;
@@ -218,9 +212,9 @@ Respond with ONLY the JSON object. Do not wrap in markdown.`,
 // Parses a plain-English description into structured job fields.
 router.post('/ai/suggest-job', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const ai = await buildAiClient();
-    if (!ai) {
-      res.status(503).json({ error: 'AI features are not configured. Add a GitHub Models token in Admin → AI Settings.' });
+    const aiClient = await buildAiClient();
+    if (!aiClient) {
+      res.status(503).json({ error: 'AI features are not configured. Add a Gemini API key in Admin → AI Settings.' });
       return;
     }
 
@@ -232,12 +226,7 @@ router.post('/ai/suggest-job', async (req: AuthRequest, res: Response): Promise<
 
     const today = new Date().toISOString().slice(0, 10);
 
-    const completion = await ai.client.chat.completions.create({
-      model: ai.model,
-      messages: [
-        {
-          role: 'system',
-          content: `You are a data extraction assistant for a trade contractor job management system.
+    const systemPrompt = `You are a data extraction assistant for a trade contractor job management system.
 Extract structured job information from a plain-English description.
 Today's date is ${today}.
 Return ONLY a valid JSON object with these exact fields (all optional except title):
@@ -248,15 +237,19 @@ Return ONLY a valid JSON object with these exact fields (all optional except tit
 
 Example: {"title":"Boiler replacement - 12 Oak Avenue","description":"Remove old gas boiler and install new Worcestershire Bosch combi boiler. Include full system flush and pressure test.","startDate":"2024-03-01","endDate":"2024-03-02"}
 
-Respond with ONLY the JSON object. Do not wrap in markdown.`,
-        },
-        { role: 'user', content: description.trim() },
-      ],
-      temperature: 0.2,
-      max_tokens: 512,
+Respond with ONLY the JSON object. Do not wrap in markdown.`;
+
+    const response = await aiClient.ai.models.generateContent({
+      model: aiClient.model,
+      contents: description.trim(),
+      config: {
+        systemInstruction: systemPrompt,
+        temperature: 0.2,
+        maxOutputTokens: 512,
+      },
     });
 
-    const raw = extractJson(completion.choices[0]?.message?.content ?? '{}');
+    const raw = extractJson(response.text ?? '{}');
     let parsed: Record<string, unknown>;
     try {
       parsed = JSON.parse(raw) as Record<string, unknown>;
