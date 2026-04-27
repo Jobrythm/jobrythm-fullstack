@@ -93,9 +93,9 @@ export const SettingsPage = () => {
     resolver: zodResolver(companySchema),
     defaultValues: {
       companyName: user?.companyName ?? '',
-      address: '',
-      defaultVatRate: 20,
-      defaultQuoteValidityDays: 14,
+      address: user?.companyAddress ?? '',
+      defaultVatRate: user?.defaultVatRate ?? 20,
+      defaultQuoteValidityDays: user?.defaultQuoteValidityDays ?? 30,
     },
   });
 
@@ -234,7 +234,7 @@ export const SettingsPage = () => {
             onSubmit={companyForm.handleSubmit((values) => {
               companyMutation.mutate({
                 companyName: values.companyName,
-                address: values.address ?? null,
+                companyAddress: values.address ?? null,
                 defaultVatRate: values.defaultVatRate,
                 defaultQuoteValidityDays: values.defaultQuoteValidityDays,
               });
@@ -356,11 +356,11 @@ export const SettingsPage = () => {
                             </div>
                             <p className="text-secondary small mb-2">{plan.description}</p>
                             <div className="mb-2">
-                              <span className="h2 fw-bold">${price}</span>
+                              <span className="h2 fw-bold">£{price}</span>
                               <span className="text-secondary small">/mo</span>
                               {billingAnnual && (
                                 <div className="text-secondary" style={{ fontSize: '0.75rem' }}>
-                                  billed ${price * 12}/yr · was ${plan.monthlyPrice}/mo
+                                  billed £{price * 12}/yr · was £{plan.monthlyPrice}/mo
                                 </div>
                               )}
                             </div>

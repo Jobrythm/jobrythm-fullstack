@@ -93,7 +93,7 @@ export const AppLayout = () => {
                       <hr className="navbar-divider" />
                     </li>
                   ) : (
-                    <li key={item.to} className={cn('nav-item', location.pathname.startsWith(item.to) && 'active')}>
+                    <li key={item.to} className={cn('nav-item', (item.to === '/' || item.to === '/dashboard' ? location.pathname === item.to || location.pathname === '/' || location.pathname === '/dashboard' : location.pathname.startsWith(item.to)) && 'active')}>
                       <Link to={item.to} className="nav-link" onClick={() => setMobileOpen(false)}>
                         <span className="nav-link-icon d-md-none d-lg-inline-block">
                           <item.icon size={18} />

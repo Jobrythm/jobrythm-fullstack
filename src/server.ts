@@ -151,7 +151,8 @@ async function seedAdminUser() {
 
     if (!existingAdmin) {
       console.log('Creating default admin user...');
-      const passwordHash = await hashPassword('adminpassword');
+      const adminPassword = process.env.ADMIN_PASSWORD || 'adminpassword';
+      const passwordHash = await hashPassword(adminPassword);
 
       const admin = userRepository.create({
         email: adminEmail,
@@ -161,7 +162,11 @@ async function seedAdminUser() {
       });
 
       await userRepository.save(admin);
-      console.log(`Admin user created: ${adminEmail} / adminpassword`);
+      if (process.env.ADMIN_PASSWORD) {
+        console.log(`Admin user created: ${adminEmail}`);
+      } else {
+        console.log(`Admin user created: ${adminEmail} / adminpassword (set ADMIN_PASSWORD env var to override)`);
+      }
     } else {
       console.log('Admin user already exists');
     }

@@ -14,7 +14,7 @@ export const getQuote = async (id: string): Promise<Quote> => {
 };
 
 export const createQuote = async (jobId: string, payload: QuotePayload): Promise<Quote> => {
-  const { data } = await apiClient.post<Quote>(`/jobs/${jobId}/quotes`, payload);
+  const { data } = await apiClient.post<Quote>('/quotes', { jobId, ...payload });
   return data;
 };
 

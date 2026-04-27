@@ -109,7 +109,7 @@ export type UpdateUserProfileRequest = {
   name?: Nullable<string>;
   companyName?: Nullable<string>;
   email?: Nullable<string>;
-  address?: Nullable<string>;
+  companyAddress?: Nullable<string>;
   defaultVatRate?: Nullable<number>;
   defaultPaymentTerms?: Nullable<string>;
   defaultQuoteValidityDays?: Nullable<number>;

@@ -3,7 +3,11 @@ export interface User {
   email: string;
   name: string;
   companyName?: string;
+  companyAddress?: string;
   logoUrl?: string;
+  defaultVatRate?: number;
+  defaultPaymentTerms?: string;
+  defaultQuoteValidityDays?: number;
   plan: 'starter' | 'professional' | 'business' | 'admin';
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
@@ -58,6 +62,8 @@ export interface Job {
   startDate?: string;
   endDate?: string;
   lineItems: LineItem[];
+  quote?: Quote | null;
+  invoice?: Invoice | null;
   totalCost: number;
   totalRevenue: number;
   marginPercent: number;

@@ -73,12 +73,19 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
         const session = event.data.object as Stripe.Checkout.Session;
         if (session.mode !== 'subscription') break;
 
+        // Prefer metadata.userId (set at checkout creation); fall back to email
+        const metaUserId = session.metadata?.userId;
         const email = session.customer_email ?? session.customer_details?.email;
         const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
         const subscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
 
-        if (!email) break;
-        const user = await userRepo.findOne({ where: { email } });
+        let user: User | null = null;
+        if (metaUserId) {
+          user = await userRepo.findOne({ where: { id: metaUserId } });
+        }
+        if (!user && email) {
+          user = await userRepo.findOne({ where: { email } });
+        }
         if (!user) break;
 
         let newPlan = SubscriptionPlan.PROFESSIONAL;

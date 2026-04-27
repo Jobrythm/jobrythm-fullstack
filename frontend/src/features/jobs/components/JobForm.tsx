@@ -14,7 +14,10 @@ const jobSchema = z
   .refine((value) => {
     if (!value.startDate || !value.endDate) return true;
     return new Date(value.endDate) >= new Date(value.startDate);
-  }, 'End date must be on or after start date');
+  }, {
+    message: 'End date must be on or after start date',
+    path: ['endDate'],
+  });
 
 type JobFormValues = z.infer<typeof jobSchema>;
 
@@ -75,7 +78,7 @@ export const JobForm = ({ clients, initialJob, isSaving = false, onSubmit, onAdd
 
           <label className="form-label mt-3">End Date</label>
           <input type="date" className="form-control" {...register('endDate')} />
-          {errors.root ? <small className="text-danger">{errors.root.message}</small> : null}
+          {errors.endDate ? <small className="text-danger">{errors.endDate.message}</small> : null}
         </div>
       </div>
 

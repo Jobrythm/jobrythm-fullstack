@@ -6,8 +6,7 @@ import { Invoice } from '../entities/Invoice.js';
 import { Quote } from '../entities/Quote.js';
 import { authenticateToken, requireAdmin, AuthRequest } from '../middleware/auth.js';
 import { hashPassword } from '../utils/auth.js';
-import { SubscriptionPlan } from '../types/enums.js';
-import { InvoiceStatus } from '../types/enums.js';
+import { SubscriptionPlan, InvoiceStatus, JobStatus } from '../types/enums.js';
 import { MoreThanOrEqual } from 'typeorm';
 
 const router = Router();
@@ -159,7 +158,7 @@ router.get('/stats', async (_req: AuthRequest, res: Response): Promise<void> => 
       userRepo.find(),
       userRepo.count({ where: { createdAt: MoreThanOrEqual(since30d) } }),
       jobRepo.count(),
-      jobRepo.count({ where: { status: 'Active' as any } }),
+      jobRepo.count({ where: { status: JobStatus.ACTIVE } }),
       invoiceRepo.find({ where: { status: InvoiceStatus.PAID } }),
       invoiceRepo.find({ where: { status: InvoiceStatus.PAID, paidAt: MoreThanOrEqual(since30d) } }),
       quoteRepo.count({ where: { createdAt: MoreThanOrEqual(since30d) } }),

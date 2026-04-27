@@ -20,10 +20,13 @@ const REFRESH_TOKEN_EXPIRES_IN_DAYS = parseInt(
 // Register
 router.post('/register', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, password, fullName } = req.body;
+    const { email, password } = req.body;
+    // Accept 'name' (frontend) or 'fullName' (admin) for compatibility
+    const fullName: string | undefined = req.body.fullName ?? req.body.name;
+    const companyName: string | undefined = req.body.companyName;
 
     if (!email || !password || !fullName) {
-      res.status(400).json({ error: 'Email, password, and full name are required' });
+      res.status(400).json({ error: 'Email, password, and name are required' });
       return;
     }
 
@@ -42,6 +45,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
       email,
       passwordHash,
       fullName,
+      companyName,
     });
 
     await userRepository.save(user);
@@ -76,6 +80,9 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
         accessToken,
         refreshToken,
         expiresAt: expiresAt.toISOString(),
+        userId: user.id,
+        email: user.email,
+        fullName: user.fullName,
       },
     });
   } catch (error) {
@@ -138,6 +145,9 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
         accessToken,
         refreshToken,
         expiresAt: expiresAt.toISOString(),
+        userId: user.id,
+        email: user.email,
+        fullName: user.fullName,
       },
     });
   } catch (error) {

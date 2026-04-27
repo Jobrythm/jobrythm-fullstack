@@ -1,6 +1,6 @@
 import { IconFileText, IconReceipt } from '@tabler/icons-react';
 import { addDays } from 'date-fns';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { ApiErrorAlert } from '../../../components/ApiErrorAlert';
@@ -9,7 +9,6 @@ import { CurrencyDisplay } from '../../../components/CurrencyDisplay';
 import { LoadingSpinner } from '../../../components/LoadingSpinner';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { formatDate, formatPercent, getMarginColor } from '../../../utils';
-import { useInvoices } from '../../invoices/hooks/useInvoices';
 import { LineItemTable } from '../components/LineItemTable';
 import {
   useCreateLineItem,
@@ -20,7 +19,7 @@ import {
   useUpdateJobStatus,
   useUpdateJob,
 } from '../hooks/useJobs';
-import { useDownloadQuotePdf, useQuotes, useSendQuote, useUpdateQuote } from '../../quotes/hooks/useQuotes';
+import { useDownloadQuotePdf, useSendQuote, useUpdateQuote } from '../../quotes/hooks/useQuotes';
 import { useDownloadInvoicePdf, useMarkInvoicePaid, useSendInvoice } from '../../invoices/hooks/useInvoices';
 import type { JobStatus } from '../../../types';
 
@@ -35,8 +34,6 @@ export const JobDetailPage = () => {
   const updateJobStatus = useUpdateJobStatus();
   const createLineItem = useCreateLineItem();
   const deleteLineItem = useDeleteLineItem();
-  const { data: quotesResponse } = useQuotes();
-  const { data: invoicesResponse } = useInvoices();
   const generateQuote = useGenerateQuote();
   const generateInvoice = useGenerateInvoice();
   const updateQuote = useUpdateQuote();
@@ -46,8 +43,9 @@ export const JobDetailPage = () => {
   const downloadQuotePdf = useDownloadQuotePdf();
   const downloadInvoicePdf = useDownloadInvoicePdf();
 
-  const quote = useMemo(() => (quotesResponse?.items ?? []).find((item) => item.jobId === id), [quotesResponse?.items, id]);
-  const invoice = useMemo(() => (invoicesResponse?.items ?? []).find((item) => item.jobId === id), [invoicesResponse?.items, id]);
+  // Use the quote/invoice already loaded with the job (avoiding redundant API calls)
+  const quote = job?.quote ?? null;
+  const invoice = job?.invoice ?? null;
 
   const openPdfBlob = (blob: Blob, fileName: string) => {
     const url = URL.createObjectURL(blob);
@@ -56,8 +54,8 @@ export const JobDetailPage = () => {
     link.download = fileName;
     link.rel = 'noopener noreferrer';
     link.target = '_blank';
+    link.onclick = () => { window.setTimeout(() => URL.revokeObjectURL(url), 0); };
     link.click();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   if (isLoading) return <LoadingSpinner label="Loading job..." />;
