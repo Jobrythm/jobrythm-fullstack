@@ -280,7 +280,8 @@ const number = await getNextNumber(userId, 'INV'); // INV0001
 
 ### Optional
 - `STRIPE_API_KEY`, `STRIPE_WEBHOOK_SECRET` (for payments)
-- `RESEND_API_KEY`, `RESEND_FROM_EMAIL` (for emails)
+- `GEMINI_API_KEY`, `GEMINI_MODEL` (for AI features — default model `gemini-2.0-flash`)
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` (for email)
 - `CORS_ORIGINS` (comma-separated URLs)
 
 ## Docker

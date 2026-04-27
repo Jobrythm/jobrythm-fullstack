@@ -92,8 +92,8 @@ const emailSettingsSchema = z.object({
 });
 
 const aiSettingsSchema = z.object({
-  githubModelsToken: z.string().optional(),
-  githubModelsModel: z.string().optional(),
+  geminiApiKey: z.string().optional(),
+  geminiModel: z.string().optional(),
 });
 
 type CreateValues = z.infer<typeof createSchema>;
@@ -998,38 +998,47 @@ const EmailSettingsPanel = () => {
   );
 };
 
-// ── AI / GitHub Models Settings panel ─────────────────────────────────────────
+// ── AI / Gemini Settings panel ─────────────────────────────────────────────────
+const GEMINI_MODELS = [
+  { value: 'gemini-2.5-pro-preview-05-06', label: 'Gemini 2.5 Pro Preview — most capable, best reasoning' },
+  { value: 'gemini-2.5-flash-preview-04-17', label: 'Gemini 2.5 Flash Preview — fast, efficient, great quality' },
+  { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash — recommended, fast & cost-effective' },
+  { value: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite — lightest & cheapest' },
+  { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro — stable, highly capable' },
+  { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash — stable, fast' },
+];
+
 const AiSettingsPanel = () => {
   const { data: settings, isLoading } = useAdminSettings();
   const updateSettings = useUpdateAdminSettings();
-  const [showToken, setShowToken] = useState(false);
+  const [showKey, setShowKey] = useState(false);
 
   const form = useForm<AiSettingsValues>({
     resolver: zodResolver(aiSettingsSchema),
     defaultValues: {
-      githubModelsToken: '',
-      githubModelsModel: 'gpt-4o',
+      geminiApiKey: '',
+      geminiModel: 'gemini-2.0-flash',
     },
   });
 
   useEffect(() => {
     if (settings) {
       form.reset({
-        githubModelsToken: '',
-        githubModelsModel: settings.githubModelsModel ?? 'gpt-4o',
+        geminiApiKey: '',
+        geminiModel: settings.geminiModel ?? 'gemini-2.0-flash',
       });
     }
   }, [settings, form]);
 
   const onSubmit = (values: AiSettingsValues) => {
     const payload: Record<string, string> = {};
-    if (values.githubModelsToken?.trim()) payload.githubModelsToken = values.githubModelsToken.trim();
-    if (values.githubModelsModel) payload.githubModelsModel = values.githubModelsModel;
+    if (values.geminiApiKey?.trim()) payload.geminiApiKey = values.geminiApiKey.trim();
+    if (values.geminiModel) payload.geminiModel = values.geminiModel;
 
     updateSettings.mutate(payload, {
       onSuccess: () => {
         toast.success('AI settings saved');
-        form.setValue('githubModelsToken', '');
+        form.setValue('geminiApiKey', '');
       },
       onError: (err: Error) => toast.error(err.message),
     });
@@ -1045,21 +1054,20 @@ const AiSettingsPanel = () => {
           <div className="d-flex gap-2 align-items-start">
             <IconAlertCircle size={18} className="mt-1 flex-shrink-0" />
             <div className="small">
-              <h4 className="alert-heading h6 mb-2">AI quote line-item suggestions — powered by GitHub Models</h4>
+              <h4 className="alert-heading h6 mb-2">AI features — powered by Google Gemini</h4>
               <p className="mb-2">
                 When enabled, contractors see a <strong>✨ AI Suggest</strong> button on job line items.
-                They describe the job in plain English, and the AI suggests appropriate line items with quantities and prices based on their past jobs.
+                The AI suggests appropriate line items with quantities and prices based on the job description and past job history.
+                AI also powers smart autofill when creating new clients and jobs.
               </p>
-              <h5 className="h6 mb-1">How to get a GitHub Models token (free)</h5>
+              <h5 className="h6 mb-1">How to get a Gemini API key</h5>
               <ol className="mb-2 ps-3">
-                <li>Go to <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer">github.com/settings/tokens <IconExternalLink size={10} /></a></li>
-                <li>Click <strong>Generate new token → Fine-grained token</strong></li>
-                <li>Under <strong>Permissions</strong>, expand <em>Account permissions</em> and set <strong>Models</strong> to <code>Read-only</code></li>
-                <li>Set an expiration (90 days or no expiration), click <strong>Generate token</strong></li>
-                <li>Copy the token (starts with <code>github_pat_…</code>) and paste it below</li>
+                <li>Go to <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">aistudio.google.com/app/apikey <IconExternalLink size={10} /></a></li>
+                <li>Click <strong>Create API key</strong> and select or create a Google Cloud project</li>
+                <li>Copy the generated API key and paste it below</li>
               </ol>
               <p className="mb-0 text-secondary">
-                GitHub Models is free for development/low-volume use. For high-volume production usage, provision an Azure OpenAI endpoint instead and replace the base URL in <code>src/routes/ai.ts</code>.
+                Gemini 2.0 Flash is free up to generous rate limits. Higher-tier models cost per token — see <a href="https://ai.google.dev/pricing" target="_blank" rel="noopener noreferrer">ai.google.dev/pricing <IconExternalLink size={10} /></a>.
               </p>
             </div>
           </div>
@@ -1076,10 +1084,10 @@ const AiSettingsPanel = () => {
                 : <IconAlertCircle size={16} className="text-warning" />
               }
               <span className="fw-semibold small">
-                {settings?.aiConfigured ? 'AI configured' : 'AI not configured — AI suggest button will be hidden'}
+                {settings?.aiConfigured ? 'AI configured' : 'AI not configured — AI features will be hidden'}
               </span>
-              {settings?.aiConfigured && settings.githubModelsModel && (
-                <span className="text-secondary small ms-1">· using <code>{settings.githubModelsModel}</code></span>
+              {settings?.aiConfigured && settings.geminiModel && (
+                <span className="text-secondary small ms-1">· using <code>{settings.geminiModel}</code></span>
               )}
             </div>
           </div>
@@ -1092,7 +1100,7 @@ const AiSettingsPanel = () => {
           <div className="card-header">
             <h3 className="card-title mb-0">
               <IconSparkles size={16} className="me-2" />
-              GitHub Models configuration
+              Gemini API configuration
             </h3>
           </div>
           <div className="card-body">
@@ -1100,37 +1108,39 @@ const AiSettingsPanel = () => {
               <div className="row g-3">
                 <div className="col-12">
                   <label className="form-label fw-semibold">
-                    GitHub Personal Access Token (PAT)
+                    Gemini API Key
                     <span className="text-secondary ms-1 fw-normal small">(leave blank to keep existing)</span>
                   </label>
                   <div className="input-group">
                     <input
-                      type={showToken ? 'text' : 'password'}
+                      type={showKey ? 'text' : 'password'}
                       className="form-control font-monospace"
-                      placeholder={settings?.githubModelsTokenSet ? 'Enter new token to replace' : 'github_pat_…'}
-                      {...form.register('githubModelsToken')}
+                      placeholder={settings?.geminiApiKeySet ? 'Enter new key to replace' : 'AIza…'}
+                      {...form.register('geminiApiKey')}
                     />
-                    <button type="button" className="btn btn-outline-secondary" onClick={() => setShowToken((v) => !v)}>
-                      {showToken ? <IconEyeOff size={14} /> : <IconEye size={14} />}
+                    <button type="button" className="btn btn-outline-secondary" onClick={() => setShowKey((v) => !v)}>
+                      {showKey ? <IconEyeOff size={14} /> : <IconEye size={14} />}
                     </button>
                   </div>
                   <div className="form-hint">
-                    A GitHub fine-grained PAT with <strong>Models: Read-only</strong> permission.
-                    Create one at <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer">github.com/settings/tokens <IconExternalLink size={10} /></a>. Format: <code>github_pat_…</code>
+                    Your Google Gemini API key (starts with <code>AIza…</code>). Get one at{' '}
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">
+                      aistudio.google.com <IconExternalLink size={10} />
+                    </a>.
                   </div>
                 </div>
 
-                <div className="col-md-6">
+                <div className="col-md-8">
                   <label className="form-label fw-semibold">Model</label>
-                  <select className="form-select" {...form.register('githubModelsModel')}>
-                    <option value="gpt-4o">gpt-4o (Recommended — best quality)</option>
-                    <option value="gpt-4o-mini">gpt-4o-mini (Faster, cheaper, slightly lower quality)</option>
-                    <option value="o1-mini">o1-mini (Reasoning model — slower)</option>
+                  <select className="form-select" {...form.register('geminiModel')}>
+                    {GEMINI_MODELS.map(({ value, label }) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
                   </select>
                   <div className="form-hint">
-                    <strong>gpt-4o</strong> produces the best structured line-item suggestions and supports JSON output mode natively.
-                    Use <strong>gpt-4o-mini</strong> to reduce API usage costs on high-volume plans.
-                    The model name is passed directly to the GitHub Models API endpoint (<code>models.inference.ai.azure.com</code>).
+                    <strong>Gemini 2.0 Flash</strong> is the recommended default — fast, cost-effective, and free up to Google's rate limits.
+                    Choose <strong>2.5 Pro Preview</strong> for the highest quality reasoning.
+                    See <a href="https://ai.google.dev/gemini-api/docs/models" target="_blank" rel="noopener noreferrer">model docs <IconExternalLink size={10} /></a> for full details.
                   </div>
                 </div>
 

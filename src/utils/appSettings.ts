@@ -79,19 +79,19 @@ export async function getAppUrl(): Promise<string> {
   return (stored ?? process.env.APP_URL ?? 'http://localhost:8080').replace(/\/$/, '');
 }
 
-export interface GitHubModelsConfig {
-  token: string | null;
+export interface GeminiConfig {
+  apiKey: string | null;
   model: string | null;
 }
 
-export async function getGitHubModelsConfig(): Promise<GitHubModelsConfig> {
-  const [token, model] = await Promise.all([
-    getSetting('github_models_token'),
-    getSetting('github_models_model'),
+export async function getGeminiConfig(): Promise<GeminiConfig> {
+  const [apiKey, model] = await Promise.all([
+    getSetting('gemini_api_key'),
+    getSetting('gemini_model'),
   ]);
   return {
-    token: token ?? process.env.GITHUB_MODELS_TOKEN ?? null,
-    model: model ?? process.env.GITHUB_MODELS_MODEL ?? 'gpt-4o',
+    apiKey: apiKey ?? process.env.GEMINI_API_KEY ?? null,
+    model: model ?? process.env.GEMINI_MODEL ?? 'gemini-2.0-flash',
   };
 }
 
