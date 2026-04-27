@@ -6,6 +6,8 @@ import {
   IconLayoutDashboard,
   IconMenu2,
   IconReceipt,
+  IconReceipt2,
+  IconChartBar,
   IconSettings,
   IconUsers,
   IconShieldLock,
@@ -48,6 +50,8 @@ const titleMap: Record<string, string> = {
   team: 'Team',
   quotes: 'Quotes',
   invoices: 'Invoices',
+  expenses: 'Expenses',
+  reports: 'Reports',
   settings: 'Settings',
   admin: 'Admin Console',
 };
@@ -93,6 +97,8 @@ export const AppLayout = () => {
         { to: '/team', label: 'Team', icon: IconUsersGroup },
         { to: '/quotes', label: 'Quotes', icon: IconFileText },
         { to: '/invoices', label: 'Invoices', icon: IconReceipt },
+        { to: '/expenses', label: 'Expenses', icon: IconReceipt2 },
+        { to: '/reports', label: 'Reports', icon: IconChartBar },
         { divider: true },
         { to: '/settings', label: 'Settings', icon: IconSettings },
       ];

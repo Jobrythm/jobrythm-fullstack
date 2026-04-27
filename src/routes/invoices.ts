@@ -110,7 +110,7 @@ router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
 
     // Calculate totals from line items
     const totalNet = job.lineItems.reduce((sum, item) => sum + item.totalPrice, 0);
-    const vatRate = user.defaultVatRate;
+    const vatRate = Number(user.defaultVatRate) || 20;
     const totals = calculateTotals(totalNet, vatRate);
 
     // Generate invoice number

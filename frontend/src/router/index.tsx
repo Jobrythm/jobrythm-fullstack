@@ -23,6 +23,8 @@ import { PublicQuotePage } from '../features/portal/pages/PublicQuotePage';
 import { PublicInvoicePage } from '../features/portal/pages/PublicInvoicePage';
 import { SchedulePage } from '../features/schedule/pages/SchedulePage';
 import { TeamPage } from '../features/team/pages/TeamPage';
+import { ExpensesPage } from '../features/expenses/pages/ExpensesPage';
+import { ReportingPage } from '../features/reports/pages/ReportingPage';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -52,6 +54,8 @@ export const router = createBrowserRouter([
           { path: '/clients/:id', element: <ClientDetailPage /> },
           { path: '/schedule', element: <SchedulePage /> },
           { path: '/team', element: <TeamPage /> },
+          { path: '/expenses', element: <ExpensesPage /> },
+          { path: '/reports', element: <ReportingPage /> },
           { path: '/quotes', element: <QuotesPage /> },
           { path: '/quotes/:id', element: <QuoteDetailPage /> },
           { path: '/invoices', element: <InvoicesPage /> },
