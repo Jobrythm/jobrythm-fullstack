@@ -23,14 +23,14 @@ export class OAuthToken {
   expiresAt!: number | null;
 
   /** QuickBooks realm ID (company ID) */
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   realmId!: string | null;
 
   /** Xero tenant ID */
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   tenantId!: string | null;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   lastSyncAt!: Date | null;
 
   @CreateDateColumn()
