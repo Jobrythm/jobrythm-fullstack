@@ -24,6 +24,7 @@ export async function setSetting(key: string, value: string | null): Promise<voi
 export interface StripeConfig {
   apiKey: string | null;
   webhookSecret: string | null;
+  portalConfigurationId: string | null;
   starterMonthlyPriceId: string | null;
   starterAnnualPriceId: string | null;
   professionalMonthlyPriceId: string | null;
@@ -36,6 +37,7 @@ export async function getStripeConfig(): Promise<StripeConfig> {
   const [
     apiKey,
     webhookSecret,
+    portalConfigurationId,
     starterMonthlyPriceId,
     starterAnnualPriceId,
     professionalMonthlyPriceId,
@@ -45,6 +47,7 @@ export async function getStripeConfig(): Promise<StripeConfig> {
   ] = await Promise.all([
     getSetting('stripe_api_key'),
     getSetting('stripe_webhook_secret'),
+    getSetting('stripe_portal_configuration_id'),
     getSetting('stripe_starter_monthly_price_id'),
     getSetting('stripe_starter_annual_price_id'),
     getSetting('stripe_professional_monthly_price_id'),
@@ -56,6 +59,7 @@ export async function getStripeConfig(): Promise<StripeConfig> {
   return {
     apiKey: apiKey ?? process.env.STRIPE_API_KEY ?? null,
     webhookSecret: webhookSecret ?? process.env.STRIPE_WEBHOOK_SECRET ?? null,
+    portalConfigurationId:      portalConfigurationId      ?? process.env.STRIPE_PORTAL_CONFIGURATION_ID      ?? 'bpc_1TQiJWIvlX8po9Ur7uSuYtZi',
     starterMonthlyPriceId:      starterMonthlyPriceId      ?? process.env.STRIPE_STARTER_MONTHLY_PRICE_ID      ?? 'price_1TQhzWIvlX8po9UrYjYdr0aV',
     starterAnnualPriceId:       starterAnnualPriceId       ?? process.env.STRIPE_STARTER_ANNUAL_PRICE_ID       ?? 'price_1TQi90IvlX8po9UrLbUmbW0v',
     professionalMonthlyPriceId: professionalMonthlyPriceId ?? process.env.STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID ?? 'price_1TQhzyIvlX8po9UrYYoF3hRj',

@@ -210,10 +210,14 @@ router.post('/portal', async (req: AuthRequest, res: Response): Promise<void> =>
     }
 
     const base = resolveReturnBase();
-    const session = await stripe.billingPortal.sessions.create({
+    const portalParams: Stripe.BillingPortal.SessionCreateParams = {
       customer: customerId,
       return_url: `${base}/settings?tab=billing`,
-    });
+    };
+    if (config.portalConfigurationId) {
+      portalParams.configuration = config.portalConfigurationId;
+    }
+    const session = await stripe.billingPortal.sessions.create(portalParams);
 
     res.json({ url: session.url });
   } catch (error) {
