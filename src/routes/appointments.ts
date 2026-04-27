@@ -14,7 +14,7 @@ router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
     const repo = AppDataSource.getRepository(Appointment);
     const { start, end } = req.query as { start?: string; end?: string };
 
-    const where: Record<string, unknown> = { userId: req.user!.userId };
+    const where: Record<string, unknown> = { userId: req.user!.companyId ?? req.user!.userId };
 
     if (start && end) {
       where.startTime = Between(new Date(start), new Date(end));
@@ -43,7 +43,7 @@ router.get('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
     const repo = AppDataSource.getRepository(Appointment);
     const id = String(req.params.id);
     const appt = await repo.findOne({
-      where: { id, userId: req.user!.userId },
+      where: { id, userId: req.user!.companyId ?? req.user!.userId },
       relations: ['job', 'client', 'job.client'],
     });
     if (!appt) { res.status(404).json({ error: 'Not found' }); return; }
@@ -66,7 +66,7 @@ router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
     }
 
     const appt = repo.create({
-      userId: req.user!.userId,
+      userId: req.user!.companyId ?? req.user!.userId,
       title,
       description,
       startTime: new Date(startTime),
@@ -97,7 +97,7 @@ router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const repo = AppDataSource.getRepository(Appointment);
     const id = String(req.params.id);
-    const appt = await repo.findOne({ where: { id, userId: req.user!.userId } });
+    const appt = await repo.findOne({ where: { id, userId: req.user!.companyId ?? req.user!.userId } });
     if (!appt) { res.status(404).json({ error: 'Not found' }); return; }
 
     const { title, description, startTime, endTime, location, jobId, clientId, assignedTo, status } = req.body;
@@ -131,7 +131,7 @@ router.delete('/:id', async (req: AuthRequest, res: Response): Promise<void> => 
   try {
     const repo = AppDataSource.getRepository(Appointment);
     const id = String(req.params.id);
-    const appt = await repo.findOne({ where: { id, userId: req.user!.userId } });
+    const appt = await repo.findOne({ where: { id, userId: req.user!.companyId ?? req.user!.userId } });
     if (!appt) { res.status(404).json({ error: 'Not found' }); return; }
     await repo.remove(appt);
     res.status(204).send();

@@ -9,6 +9,8 @@ export interface User {
   defaultPaymentTerms?: string;
   defaultQuoteValidityDays?: number;
   plan: 'starter' | 'professional' | 'business' | 'admin';
+  companyRole?: 'owner' | 'business_admin' | 'member';
+  parentUserId?: string;
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   subscriptionEndsAt?: string;

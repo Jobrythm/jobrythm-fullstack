@@ -25,7 +25,7 @@ router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
     const jobRepository = AppDataSource.getRepository(Job);
     const skip = (page - 1) * pageSize;
 
-    const where: any = { userId: req.user!.userId };
+    const where: any = { userId: req.user!.companyId ?? req.user!.userId };
     if (search) {
       where.title = Like(`%${search}%`);
     }
@@ -58,7 +58,7 @@ router.get('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const jobRepository = AppDataSource.getRepository(Job);
     const job = await jobRepository.findOne({
-      where: { id: String(req.params.id), userId: req.user!.userId },
+      where: { id: String(req.params.id), userId: req.user!.companyId ?? req.user!.userId },
       relations: ['client', 'lineItems', 'quote', 'invoice'],
     });
 
@@ -92,7 +92,7 @@ router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
     if (user?.plan === SubscriptionPlan.STARTER) {
       const openCount = await jobRepository.count({
         where: {
-          userId: req.user!.userId,
+          userId: req.user!.companyId ?? req.user!.userId,
           status: In([JobStatus.DRAFT, JobStatus.QUOTED, JobStatus.ACTIVE]),
         },
       });
@@ -106,7 +106,7 @@ router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
     }
 
     const job = jobRepository.create({
-      userId: req.user!.userId,
+      userId: req.user!.companyId ?? req.user!.userId,
       clientId,
       title,
       description,
@@ -129,7 +129,7 @@ router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const jobRepository = AppDataSource.getRepository(Job);
     const job = await jobRepository.findOne({
-      where: { id: String(req.params.id), userId: req.user!.userId },
+      where: { id: String(req.params.id), userId: req.user!.companyId ?? req.user!.userId },
     });
 
     if (!job) {
@@ -159,7 +159,7 @@ router.patch('/:id/status', async (req: AuthRequest, res: Response): Promise<voi
   try {
     const jobRepository = AppDataSource.getRepository(Job);
     const job = await jobRepository.findOne({
-      where: { id: String(req.params.id), userId: req.user!.userId },
+      where: { id: String(req.params.id), userId: req.user!.companyId ?? req.user!.userId },
     });
 
     if (!job) {
@@ -189,7 +189,7 @@ router.delete('/:id', async (req: AuthRequest, res: Response): Promise<void> => 
   try {
     const jobRepository = AppDataSource.getRepository(Job);
     const job = await jobRepository.findOne({
-      where: { id: String(req.params.id), userId: req.user!.userId },
+      where: { id: String(req.params.id), userId: req.user!.companyId ?? req.user!.userId },
     });
 
     if (!job) {
@@ -213,7 +213,7 @@ router.post('/:jobId/line-items', async (req: AuthRequest, res: Response): Promi
   try {
     const jobRepository = AppDataSource.getRepository(Job);
     const job = await jobRepository.findOne({
-      where: { id: String(req.params.jobId), userId: req.user!.userId },
+      where: { id: String(req.params.jobId), userId: req.user!.companyId ?? req.user!.userId },
     });
 
     if (!job) {

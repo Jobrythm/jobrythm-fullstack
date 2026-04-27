@@ -32,6 +32,7 @@ import attachmentRoutes from './routes/attachments.js';
 import expenseRoutes from './routes/expenses.js';
 import checklistRoutes from './routes/checklists.js';
 import reportsRoutes from './routes/reports.js';
+import companyMembersRoutes from './routes/companyMembers.js';
 import { User } from './entities/User.js';
 import { hashPassword } from './utils/auth.js';
 import { SubscriptionPlan } from './types/enums.js';
@@ -118,6 +119,7 @@ app.use('/api', apiLimiter, aiRoutes);
 app.use('/api/expenses', apiLimiter, expenseRoutes);
 app.use('/api/checklists', apiLimiter, checklistRoutes);
 app.use('/api/reports', apiLimiter, reportsRoutes);
+app.use('/api/company', apiLimiter, companyMembersRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

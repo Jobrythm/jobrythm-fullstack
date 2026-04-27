@@ -51,23 +51,19 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
     await userRepository.save(user);
 
     // Generate tokens
-    const accessToken = generateAccessToken({ userId: user.id, email: user.email, companyId: user.id });
-    const refreshToken = generateRefreshToken();
-    const tokenHash = await hashToken(refreshToken);
-
-    // Save refresh token
-    const refreshTokenRepository = AppDataSource.getRepository(RefreshToken);
-    const refreshTokenEntity = refreshTokenRepository.create({
+    const accessToken = generateAccessToken({ userId: user.id, email: user.email, companyId: user.id, companyRole: 'owner' });
+    const rawRefreshToken = generateRefreshToken();
+    const hashedRefreshToken = await hashToken(rawRefreshToken);
+    const regRefreshTokenRepo = AppDataSource.getRepository(RefreshToken);
+    const refreshTokenEntity = regRefreshTokenRepo.create({
+      tokenHash: hashedRefreshToken,
       userId: user.id,
-      tokenHash,
-      expiresAt: addDays(new Date(), REFRESH_TOKEN_EXPIRES_IN_DAYS),
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     });
+    await regRefreshTokenRepo.save(refreshTokenEntity);
 
-    await refreshTokenRepository.save(refreshTokenEntity);
-
-    // Calculate expiry time
     const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 1); // 1 hour from now
+    expiresAt.setHours(expiresAt.getHours() + 1);
 
     res.status(201).json({
       user: {
@@ -75,10 +71,11 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
         email: user.email,
         name: user.fullName,
         plan: user.plan,
+        companyRole: 'owner',
       },
       session: {
         accessToken,
-        refreshToken,
+        refreshToken: rawRefreshToken,
         expiresAt: expiresAt.toISOString(),
         userId: user.id,
         email: user.email,
@@ -116,7 +113,13 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     }
 
     // Generate tokens
-    const accessToken = generateAccessToken({ userId: user.id, email: user.email, companyId: user.id });
+    const accessToken = generateAccessToken({
+      userId: user.id,
+      email: user.email,
+      companyId: user.parentUserId ?? user.id,
+      companyRole: user.companyRole ?? 'owner',
+      parentUserId: user.parentUserId,
+    });
     const refreshToken = generateRefreshToken();
     const tokenHash = await hashToken(refreshToken);
 
@@ -140,6 +143,8 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
         email: user.email,
         name: user.fullName,
         plan: user.plan,
+        companyRole: user.companyRole ?? 'owner',
+        parentUserId: user.parentUserId,
       },
       session: {
         accessToken,
@@ -183,7 +188,9 @@ router.post('/refresh', async (req: Request, res: Response): Promise<void> => {
     const accessToken = generateAccessToken({
       userId: tokenEntity.user.id,
       email: tokenEntity.user.email,
-      companyId: tokenEntity.user.id,
+      companyId: tokenEntity.user.parentUserId ?? tokenEntity.user.id,
+      companyRole: tokenEntity.user.companyRole ?? 'owner',
+      parentUserId: tokenEntity.user.parentUserId,
     });
 
     // Calculate expiry time

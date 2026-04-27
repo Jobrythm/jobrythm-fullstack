@@ -19,7 +19,9 @@ const effectiveJwtSecret = JWT_SECRET || 'dev-insecure-secret-do-not-use-in-prod
 export interface JwtPayload {
   userId: string;
   email: string;
-  companyId: string;
+  companyId: string;       // = parentUserId ?? userId — data scope
+  companyRole: string;     // 'owner' | 'business_admin' | 'member'
+  parentUserId?: string;   // only present for sub-users
 }
 
 export async function hashPassword(password: string): Promise<string> {

@@ -72,6 +72,10 @@ export const AppLayout = () => {
   const navigate = useNavigate();
   const { user, session, clearAuth } = useAuth();
   const isAdmin = user?.plan === 'admin';
+  const companyRole = user?.companyRole ?? 'owner';
+  const isMember = companyRole === 'member';
+  const _isBusinessAdmin = companyRole === 'business_admin'; // reserved for future role-specific UI
+  void _isBusinessAdmin;
   const { data: activeJobsResponse } = useJobs({ status: 'active' }, { enabled: !isAdmin });
   const activeJobs = activeJobsResponse?.items ?? [];
 
@@ -92,16 +96,20 @@ export const AppLayout = () => {
     : [
         { to: '/dashboard', label: 'Dashboard', icon: IconLayoutDashboard },
         { to: '/jobs', label: 'Jobs', icon: IconBriefcase, badge: activeJobs.length },
-        { to: '/clients', label: 'Clients', icon: IconUsers },
+        ...(!isMember ? [
+          { to: '/clients', label: 'Clients', icon: IconUsers },
+        ] : []),
         { to: '/schedule', label: 'Schedule', icon: IconCalendar },
-        { to: '/team', label: 'Team', icon: IconUsersGroup },
-        { to: '/quotes', label: 'Quotes', icon: IconFileText },
-        { to: '/invoices', label: 'Invoices', icon: IconReceipt },
-        { to: '/expenses', label: 'Expenses', icon: IconReceipt2 },
-        { to: '/reports', label: 'Reports', icon: IconChartBar },
+        ...(!isMember ? [
+          { to: '/team', label: 'Team', icon: IconUsersGroup },
+          { to: '/quotes', label: 'Quotes', icon: IconFileText },
+          { to: '/invoices', label: 'Invoices', icon: IconReceipt },
+          { to: '/expenses', label: 'Expenses', icon: IconReceipt2 },
+          { to: '/reports', label: 'Reports', icon: IconChartBar },
+        ] : []),
         { divider: true },
-        { to: '/settings', label: 'Settings', icon: IconSettings },
-      ];
+        ...(!isMember ? [{ to: '/settings', label: 'Settings', icon: IconSettings }] : []),
+      ] as SidebarItem[];
 
   return (
     <TopbarActionContext.Provider value={{ setTopbarAction }}>
@@ -138,8 +146,8 @@ export const AppLayout = () => {
               </ul>
 
               <div className="mt-auto p-3 border-top">
-                {/* Plan badge + upgrade nudge */}
-                {!isAdmin && (
+                {/* Plan badge + upgrade nudge — hidden for sub-users */}
+                {!isAdmin && !isMember && (
                   <div className="mb-2">
                     <span className={`badge text-capitalize ${planBadgeClass[user?.plan ?? 'starter'] ?? 'bg-secondary-lt'}`}>
                       {user?.plan ?? 'starter'} plan

@@ -46,6 +46,12 @@ export class User extends BaseEntity {
   @Column({ nullable: true })
   subscriptionEndsAt?: Date;
 
+  @Column({ nullable: true })
+  parentUserId?: string;
+
+  @Column({ default: 'owner' })
+  companyRole!: string;  // 'owner' | 'business_admin' | 'member'
+
   @OneToMany('Client', 'user')
   clients!: Relation<Client[]>;
 

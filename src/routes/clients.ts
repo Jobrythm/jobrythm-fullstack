@@ -19,7 +19,7 @@ router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
     const clientRepository = AppDataSource.getRepository(Client);
     const skip = (page - 1) * pageSize;
 
-    const where: any = { userId: req.user!.userId };
+    const where: any = { userId: req.user!.companyId ?? req.user!.userId };
     if (search) {
       where.name = Like(`%${search}%`);
     }
@@ -48,7 +48,7 @@ router.get('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const clientRepository = AppDataSource.getRepository(Client);
     const client = await clientRepository.findOne({
-      where: { id: String(req.params.id), userId: req.user!.userId },
+      where: { id: String(req.params.id), userId: req.user!.companyId ?? req.user!.userId },
       relations: ['jobs'],
     });
 
@@ -76,7 +76,7 @@ router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
 
     const clientRepository = AppDataSource.getRepository(Client);
     const client = clientRepository.create({
-      userId: req.user!.userId,
+      userId: req.user!.companyId ?? req.user!.userId,
       name,
       email,
       phone,
@@ -97,7 +97,7 @@ router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const clientRepository = AppDataSource.getRepository(Client);
     const client = await clientRepository.findOne({
-      where: { id: String(req.params.id), userId: req.user!.userId },
+      where: { id: String(req.params.id), userId: req.user!.companyId ?? req.user!.userId },
     });
 
     if (!client) {
@@ -126,7 +126,7 @@ router.delete('/:id', async (req: AuthRequest, res: Response): Promise<void> => 
   try {
     const clientRepository = AppDataSource.getRepository(Client);
     const client = await clientRepository.findOne({
-      where: { id: String(req.params.id), userId: req.user!.userId },
+      where: { id: String(req.params.id), userId: req.user!.companyId ?? req.user!.userId },
     });
 
     if (!client) {
