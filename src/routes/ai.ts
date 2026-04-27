@@ -132,4 +132,146 @@ Please suggest 3–8 appropriate line items for this job.`;
   }
 });
 
+// Helper: build an OpenAI client from stored config, or return null
+async function buildAiClient(): Promise<{ client: OpenAI; model: string } | null> {
+  const aiConfig = await getGitHubModelsConfig();
+  if (!aiConfig.token) return null;
+  return {
+    client: new OpenAI({ baseURL: 'https://models.inference.ai.azure.com', apiKey: aiConfig.token }),
+    model: aiConfig.model ?? 'gpt-4o',
+  };
+}
+
+// POST /api/ai/suggest-client
+// Parses a plain-English description into structured client fields.
+router.post('/ai/suggest-client', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const ai = await buildAiClient();
+    if (!ai) {
+      res.status(503).json({ error: 'AI features are not configured. Add a GitHub Models token in Admin → AI Settings.' });
+      return;
+    }
+
+    const { description } = req.body as { description?: string };
+    if (!description?.trim()) {
+      res.status(400).json({ error: 'description is required' });
+      return;
+    }
+
+    const completion = await ai.client.chat.completions.create({
+      model: ai.model,
+      messages: [
+        {
+          role: 'system',
+          content: `You are a data extraction assistant for a trade contractor CRM.
+Extract structured client/contact information from a plain-English description.
+Return ONLY a valid JSON object with these exact fields (all optional except name):
+- name: string (person or company name)
+- email: string (email address if mentioned)
+- phone: string (phone number if mentioned, include country code if provided)
+- address: string (full address if mentioned)
+- notes: string (any other relevant info e.g. "commercial client", "referred by X")
+
+Example: {"name":"Smith Plumbing Ltd","email":"info@smithplumbing.com","phone":"07700 900123","address":"12 High Street, London, SW1A 1AA","notes":"Commercial client, prefers morning calls"}
+
+Respond with ONLY the JSON object. Do not wrap in markdown.`,
+        },
+        { role: 'user', content: description.trim() },
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0.2,
+      max_tokens: 512,
+    });
+
+    const raw = completion.choices[0]?.message?.content ?? '{}';
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      res.status(500).json({ error: 'AI returned an invalid response. Please try again.' });
+      return;
+    }
+
+    res.json({
+      name: String(parsed.name ?? '').trim(),
+      email: String(parsed.email ?? '').trim(),
+      phone: String(parsed.phone ?? '').trim(),
+      address: String(parsed.address ?? '').trim(),
+      notes: String(parsed.notes ?? '').trim(),
+    });
+  } catch (error) {
+    console.error('AI suggest-client error:', error);
+    const msg = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({ error: `AI suggestion failed: ${msg}` });
+  }
+});
+
+// POST /api/ai/suggest-job
+// Parses a plain-English description into structured job fields.
+router.post('/ai/suggest-job', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const ai = await buildAiClient();
+    if (!ai) {
+      res.status(503).json({ error: 'AI features are not configured. Add a GitHub Models token in Admin → AI Settings.' });
+      return;
+    }
+
+    const { description } = req.body as { description?: string };
+    if (!description?.trim()) {
+      res.status(400).json({ error: 'description is required' });
+      return;
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+
+    const completion = await ai.client.chat.completions.create({
+      model: ai.model,
+      messages: [
+        {
+          role: 'system',
+          content: `You are a data extraction assistant for a trade contractor job management system.
+Extract structured job information from a plain-English description.
+Today's date is ${today}.
+Return ONLY a valid JSON object with these exact fields (all optional except title):
+- title: string (short job title, max ~60 chars)
+- description: string (detailed job description, 1-3 sentences)
+- startDate: string (ISO date YYYY-MM-DD if a start date is mentioned or implied, otherwise omit)
+- endDate: string (ISO date YYYY-MM-DD if an end/completion date is mentioned or implied, otherwise omit)
+
+Example: {"title":"Boiler replacement - 12 Oak Avenue","description":"Remove old gas boiler and install new Worcestershire Bosch combi boiler. Include full system flush and pressure test.","startDate":"2024-03-01","endDate":"2024-03-02"}
+
+Respond with ONLY the JSON object. Do not wrap in markdown.`,
+        },
+        { role: 'user', content: description.trim() },
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0.2,
+      max_tokens: 512,
+    });
+
+    const raw = completion.choices[0]?.message?.content ?? '{}';
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      res.status(500).json({ error: 'AI returned an invalid response. Please try again.' });
+      return;
+    }
+
+    // Validate date format
+    const isIsoDate = (v: unknown) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+
+    res.json({
+      title: String(parsed.title ?? '').trim(),
+      description: String(parsed.description ?? '').trim(),
+      startDate: isIsoDate(parsed.startDate) ? (parsed.startDate as string) : '',
+      endDate: isIsoDate(parsed.endDate) ? (parsed.endDate as string) : '',
+    });
+  } catch (error) {
+    console.error('AI suggest-job error:', error);
+    const msg = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({ error: `AI suggestion failed: ${msg}` });
+  }
+});
+
 export default router;

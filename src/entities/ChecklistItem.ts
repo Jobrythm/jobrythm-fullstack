@@ -2,8 +2,8 @@ import { Entity, Column, ManyToOne, JoinColumn, Relation } from 'typeorm';
 import { BaseEntity } from './BaseEntity.js';
 import type { Job } from './Job.js';
 
-@Entity('attachments')
-export class Attachment extends BaseEntity {
+@Entity('checklist_items')
+export class ChecklistItem extends BaseEntity {
   @Column()
   jobId!: string;
 
@@ -12,20 +12,17 @@ export class Attachment extends BaseEntity {
   job!: Relation<Job>;
 
   @Column()
-  userId!: string;
+  companyId!: string;
 
   @Column()
-  fileName!: string;
+  title!: string;
 
-  @Column()
-  originalName!: string;
+  @Column({ default: false })
+  isCompleted!: boolean;
 
-  @Column()
-  mimeType!: string;
-
-  @Column({ type: 'int' })
-  size!: number;
+  @Column({ type: 'int', default: 0 })
+  sortOrder!: number;
 
   @Column({ nullable: true, type: 'text' })
-  description?: string;
+  notes?: string;
 }

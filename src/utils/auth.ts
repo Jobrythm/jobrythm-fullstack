@@ -19,6 +19,7 @@ const effectiveJwtSecret = JWT_SECRET || 'dev-insecure-secret-do-not-use-in-prod
 export interface JwtPayload {
   userId: string;
   email: string;
+  companyId: string;
 }
 
 export async function hashPassword(password: string): Promise<string> {

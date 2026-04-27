@@ -1,8 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
+import toast from 'react-hot-toast';
 import type { Client, Job } from '../../../types';
 import { ClientSearchSelect } from '../../../components/ClientSearchSelect';
+import { AiDescribeInput } from '../../../components/AiDescribeInput';
 
 const jobSchema = z
   .object({
@@ -35,6 +37,7 @@ export const JobForm = ({ clients, initialJob, isSaving = false, onSubmit, onAdd
     register,
     handleSubmit,
     control,
+    setValue,
     formState: { errors },
   } = useForm<JobFormValues>({
     resolver: zodResolver(jobSchema),
@@ -47,8 +50,23 @@ export const JobForm = ({ clients, initialJob, isSaving = false, onSubmit, onAdd
     },
   });
 
+  const handleAiFill = (fields: Record<string, string>) => {
+    if (fields.title) setValue('title', fields.title, { shouldValidate: true });
+    if (fields.description) setValue('description', fields.description);
+    if (fields.startDate) setValue('startDate', fields.startDate);
+    if (fields.endDate) setValue('endDate', fields.endDate);
+    toast.success('Fields filled from AI — review and adjust before saving');
+  };
+
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
+      <div className="mb-3">
+        <AiDescribeInput
+          endpoint="/ai/suggest-job"
+          placeholder="e.g. Replace the boiler at 12 Oak Street for next Monday, fitting a new Worcestershire Bosch combi, should take 2 days"
+          onResult={handleAiFill}
+        />
+      </div>
       <div className="row g-3">
         <div className="col-md-8">
           <label className="form-label">Job Title</label>

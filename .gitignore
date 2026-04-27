@@ -13,7 +13,8 @@ frontend/dist/
 .env.production
 
 # Uploads
-uploads/
+uploads/*
+!uploads/.gitkeep
 
 # Logs
 logs/

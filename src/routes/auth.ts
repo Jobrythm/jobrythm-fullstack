@@ -51,7 +51,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
     await userRepository.save(user);
 
     // Generate tokens
-    const accessToken = generateAccessToken({ userId: user.id, email: user.email });
+    const accessToken = generateAccessToken({ userId: user.id, email: user.email, companyId: user.id });
     const refreshToken = generateRefreshToken();
     const tokenHash = await hashToken(refreshToken);
 
@@ -116,7 +116,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     }
 
     // Generate tokens
-    const accessToken = generateAccessToken({ userId: user.id, email: user.email });
+    const accessToken = generateAccessToken({ userId: user.id, email: user.email, companyId: user.id });
     const refreshToken = generateRefreshToken();
     const tokenHash = await hashToken(refreshToken);
 
@@ -183,6 +183,7 @@ router.post('/refresh', async (req: Request, res: Response): Promise<void> => {
     const accessToken = generateAccessToken({
       userId: tokenEntity.user.id,
       email: tokenEntity.user.email,
+      companyId: tokenEntity.user.id,
     });
 
     // Calculate expiry time

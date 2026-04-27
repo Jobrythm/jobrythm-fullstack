@@ -28,6 +28,9 @@ import appointmentsRoutes from './routes/appointments.js';
 import teamRoutes from './routes/team.js';
 import timeEntriesRoutes from './routes/timeEntries.js';
 import aiRoutes from './routes/ai.js';
+import attachmentRoutes from './routes/attachments.js';
+import expenseRoutes from './routes/expenses.js';
+import checklistRoutes from './routes/checklists.js';
 import { User } from './entities/User.js';
 import { hashPassword } from './utils/auth.js';
 import { SubscriptionPlan } from './types/enums.js';
@@ -109,7 +112,10 @@ app.use('/api/demo-data', apiLimiter, demoDataRoutes);
 app.use('/api/appointments', apiLimiter, appointmentsRoutes);
 app.use('/api/team', apiLimiter, teamRoutes);
 app.use('/api/time-entries', apiLimiter, timeEntriesRoutes);
+app.use('/api/attachments', apiLimiter, attachmentRoutes);
 app.use('/api', apiLimiter, aiRoutes);
+app.use('/api/expenses', apiLimiter, expenseRoutes);
+app.use('/api/checklists', apiLimiter, checklistRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {
@@ -119,6 +125,7 @@ app.get('/api/health', (_req, res) => {
 // Serve static frontend files
 const publicPath = path.join(__dirname, '../public');
 app.use(express.static(publicPath));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Serve frontend for all non-API routes
 app.get('*', (req, res) => {

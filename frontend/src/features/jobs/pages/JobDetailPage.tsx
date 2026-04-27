@@ -9,6 +9,9 @@ import { CurrencyDisplay } from '../../../components/CurrencyDisplay';
 import { LoadingSpinner } from '../../../components/LoadingSpinner';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { formatDate, formatPercent, getMarginColor } from '../../../utils';
+import { AiSuggestPanel } from '../components/AiSuggestPanel';
+import { AttachmentsTab } from '../components/AttachmentsTab';
+import { ChecklistTab } from '../components/ChecklistTab';
 import { LineItemTable } from '../components/LineItemTable';
 import { TimeEntriesTab } from '../components/TimeEntriesTab';
 import {
@@ -28,7 +31,7 @@ const statusOptions: JobStatus[] = ['draft', 'quoted', 'active', 'completed', 'i
 
 export const JobDetailPage = () => {
   const { id } = useParams();
-  const [tab, setTab] = useState<'overview' | 'line-items' | 'quote' | 'invoice' | 'time'>('overview');
+  const [tab, setTab] = useState<'overview' | 'line-items' | 'checklist' | 'files' | 'quote' | 'invoice' | 'time'>('overview');
   const [deleteLineItemId, setDeleteLineItemId] = useState<string | null>(null);
   const { data: job, isLoading, isError, error } = useJob(id);
   const updateJob = useUpdateJob();
@@ -109,6 +112,8 @@ export const JobDetailPage = () => {
               <li className="nav-item"><button className={`nav-link ${tab === 'overview' ? 'active' : ''}`} onClick={() => setTab('overview')}>Overview</button></li>
               <li className="nav-item"><button className={`nav-link ${tab === 'line-items' ? 'active' : ''}`} onClick={() => setTab('line-items')}>Line Items</button></li>
               <li className="nav-item"><button className={`nav-link ${tab === 'time' ? 'active' : ''}`} onClick={() => setTab('time')}>Time</button></li>
+              <li className="nav-item"><button className={`nav-link ${tab === 'checklist' ? 'active' : ''}`} onClick={() => setTab('checklist')}>Checklist</button></li>
+              <li className="nav-item"><button className={`nav-link ${tab === 'files' ? 'active' : ''}`} onClick={() => setTab('files')}>Files</button></li>
               <li className="nav-item"><button className={`nav-link ${tab === 'quote' ? 'active' : ''}`} onClick={() => setTab('quote')}>Quote</button></li>
               <li className="nav-item"><button className={`nav-link ${tab === 'invoice' ? 'active' : ''}`} onClick={() => setTab('invoice')}>Invoice</button></li>
             </ul>
@@ -144,6 +149,26 @@ export const JobDetailPage = () => {
         <div className="col-12">
           <div className="card">
             <div className="card-body">
+              <AiSuggestPanel
+                jobId={job.id}
+                onAdd={(values) => {
+                  createLineItem.mutate(
+                    {
+                      jobId: job.id,
+                      payload: {
+                        ...values,
+                        category: values.category as import('../../../types').LineItemCategory,
+                        unitCost: Math.round(values.unitCost * 100),
+                        unitPrice: Math.round(values.unitPrice * 100),
+                      },
+                    },
+                    {
+                      onSuccess: () => toast.success('Line item added'),
+                      onError: (err: Error) => toast.error(err.message),
+                    }
+                  );
+                }}
+              />
               <LineItemTable
                 items={job.lineItems}
                 onAdd={(values) => {
@@ -170,6 +195,10 @@ export const JobDetailPage = () => {
       ) : null}
 
       {tab === 'time' ? <TimeEntriesTab jobId={job.id} /> : null}
+
+      {tab === 'checklist' ? <ChecklistTab jobId={job.id} /> : null}
+
+      {tab === 'files' ? <AttachmentsTab jobId={job.id} /> : null}
 
       {tab === 'quote' ? (
         <div className="col-12">
