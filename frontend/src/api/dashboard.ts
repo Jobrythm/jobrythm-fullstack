@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { DashboardStats } from '../types';
+import type { BillingStatus, DashboardStats } from '../types';
 import type { BillingRedirectResponse, DashboardResponse } from './types';
 
 export const getDashboardStats = async (): Promise<DashboardStats> => {
@@ -36,8 +36,13 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
   };
 };
 
-export const createCheckoutSession = async (): Promise<BillingRedirectResponse> => {
-  const { data } = await apiClient.post<BillingRedirectResponse>('/billing/checkout');
+export const getBillingStatus = async (): Promise<BillingStatus> => {
+  const { data } = await apiClient.get<BillingStatus>('/billing/status');
+  return data;
+};
+
+export const createCheckoutSession = async (planTier: 'pro' | 'team' = 'pro'): Promise<BillingRedirectResponse> => {
+  const { data } = await apiClient.post<BillingRedirectResponse>('/billing/checkout', { planTier });
   return data;
 };
 

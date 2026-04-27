@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { AdminUser, AdminUserPlan } from '../types';
+import type { AdminUser, AdminUserPlan, AppSettings } from '../types';
 
 export interface CreateUserPayload {
   email: string;
@@ -13,6 +13,13 @@ export interface UpdateUserPayload {
   fullName?: string;
   companyName?: string;
   plan?: AdminUserPlan;
+}
+
+export interface UpdateSettingsPayload {
+  stripeApiKey?: string;
+  stripeWebhookSecret?: string;
+  stripeProPriceId?: string;
+  stripeTeamPriceId?: string;
 }
 
 export const adminGetUsers = async (): Promise<AdminUser[]> => {
@@ -32,4 +39,14 @@ export const adminUpdateUser = async (id: string, payload: UpdateUserPayload): P
 
 export const adminDeleteUser = async (id: string): Promise<void> => {
   await apiClient.delete(`/admin/users/${id}`);
+};
+
+export const adminGetSettings = async (): Promise<AppSettings> => {
+  const { data } = await apiClient.get<AppSettings>('/admin/settings');
+  return data;
+};
+
+export const adminUpdateSettings = async (payload: UpdateSettingsPayload): Promise<AppSettings> => {
+  const { data } = await apiClient.put<AppSettings>('/admin/settings', payload);
+  return data;
 };

@@ -5,6 +5,9 @@ export interface User {
   companyName?: string;
   logoUrl?: string;
   plan: 'starter' | 'pro' | 'team' | 'admin';
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
+  subscriptionEndsAt?: string;
   createdAt: string;
 }
 
@@ -111,6 +114,23 @@ export interface DashboardStats {
   outstandingInvoices: number;
   recentJobs: Job[];
   recentActivity: ActivityItem[];
+}
+
+export interface AppSettings {
+  stripeApiKey: string;
+  stripeApiKeySet: boolean;
+  stripeWebhookSecret: string;
+  stripeWebhookSecretSet: boolean;
+  stripeProPriceId: string;
+  stripeProPriceIdSet: boolean;
+  stripeTeamPriceId: string;
+  stripeTeamPriceIdSet: boolean;
+}
+
+export interface BillingStatus {
+  configured: boolean;
+  hasProPlan: boolean;
+  hasTeamPlan: boolean;
 }
 
 export interface AuthResponse {

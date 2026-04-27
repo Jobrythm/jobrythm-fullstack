@@ -1,12 +1,13 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { z } from 'zod';
+import { IconAlertCircle, IconCheck, IconCrown } from '@tabler/icons-react';
 import { useAuthStore } from '../../../store/authStore';
 import { updateCurrentUser, uploadCurrentUserLogo } from '../../../api/users';
-import { createBillingPortalSession, createCheckoutSession } from '../../../api/dashboard';
+import { createBillingPortalSession, createCheckoutSession, getBillingStatus } from '../../../api/dashboard';
 
 const profileSchema = z.object({
   name: z.string().min(1, 'Required'),
@@ -24,6 +25,13 @@ const companySchema = z.object({
 
 type ProfileValues = z.infer<typeof profileSchema>;
 type CompanyValues = z.infer<typeof companySchema>;
+
+const planBadge: Record<string, string> = {
+  starter: 'bg-secondary-lt',
+  pro: 'bg-blue-lt',
+  team: 'bg-indigo-lt',
+  admin: 'bg-red-lt',
+};
 
 export const SettingsPage = () => {
   const [tab, setTab] = useState<'profile' | 'company' | 'billing'>('profile');
@@ -85,7 +93,7 @@ export const SettingsPage = () => {
   });
 
   const checkoutMutation = useMutation({
-    mutationFn: createCheckoutSession,
+    mutationFn: (planTier: 'pro' | 'team') => createCheckoutSession(planTier),
     onSuccess: (result) => {
       window.location.assign(result.url);
     },
@@ -98,6 +106,12 @@ export const SettingsPage = () => {
       window.location.assign(result.url);
     },
     onError: (error: Error) => toast.error(error.message),
+  });
+
+  const { data: billingStatus } = useQuery({
+    queryKey: ['billing', 'status'],
+    queryFn: getBillingStatus,
+    enabled: tab === 'billing',
   });
 
   const handleLogoUpload = (file: File | null) => {
@@ -113,6 +127,9 @@ export const SettingsPage = () => {
     }
     uploadLogoMutation.mutate(file);
   };
+
+  const currentPlan = user?.plan ?? 'starter';
+  const isPaid = currentPlan === 'pro' || currentPlan === 'team';
 
   return (
     <div className="card">
@@ -199,17 +216,112 @@ export const SettingsPage = () => {
 
         {tab === 'billing' ? (
           <div>
-            <div className="mb-3">
-              <span className="badge bg-indigo-lt text-capitalize">{user?.plan ?? 'starter'} plan</span>
+            {/* Current plan */}
+            <div className="mb-4">
+              <div className="d-flex align-items-center gap-2 mb-1">
+                <span className={`badge text-capitalize ${planBadge[currentPlan] ?? 'bg-secondary-lt'}`}>
+                  {currentPlan} plan
+                </span>
+                {isPaid && <IconCrown size={16} className="text-warning" />}
+              </div>
+              {user?.subscriptionEndsAt && (
+                <div className="text-secondary small">
+                  Renews / expires: {new Date(user.subscriptionEndsAt).toLocaleDateString()}
+                </div>
+              )}
             </div>
-            <div className="btn-list">
-              <button className="btn btn-primary" onClick={() => checkoutMutation.mutate()} disabled={checkoutMutation.isPending}>
-                {checkoutMutation.isPending ? 'Redirecting...' : 'Upgrade plan'}
-              </button>
-              <button className="btn btn-outline-danger" onClick={() => portalMutation.mutate()} disabled={portalMutation.isPending}>
-                {portalMutation.isPending ? 'Redirecting...' : 'Manage subscription'}
-              </button>
-            </div>
+
+            {/* Billing not configured */}
+            {billingStatus && !billingStatus.configured && (
+              <div className="alert alert-warning d-flex align-items-center gap-2">
+                <IconAlertCircle size={18} />
+                <span>Billing is not configured yet. Please ask your administrator to set up Stripe in the Admin console.</span>
+              </div>
+            )}
+
+            {/* Active subscriber — manage subscription */}
+            {billingStatus?.configured && isPaid && (
+              <div>
+                <p className="text-secondary mb-3">You have an active subscription. Use the button below to change your plan, update payment details, or cancel.</p>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => portalMutation.mutate()}
+                  disabled={portalMutation.isPending}
+                >
+                  {portalMutation.isPending ? 'Redirecting…' : 'Manage subscription'}
+                </button>
+              </div>
+            )}
+
+            {/* Starter — show plan cards */}
+            {billingStatus?.configured && !isPaid && (
+              <div className="row g-3">
+                {billingStatus.hasProPlan && (
+                  <div className="col-md-6">
+                    <div className="card border-primary">
+                      <div className="card-body">
+                        <div className="d-flex justify-content-between align-items-start mb-2">
+                          <h3 className="card-title mb-0">Pro</h3>
+                          <span className="badge bg-blue-lt">Most popular</span>
+                        </div>
+                        <p className="text-secondary small mb-3">Perfect for growing trade businesses.</p>
+                        <ul className="list-unstyled small mb-3">
+                          {['Unlimited jobs & quotes', 'PDF generation', 'Email sending', 'Priority support'].map((f) => (
+                            <li key={f} className="d-flex align-items-center gap-1 mb-1">
+                              <IconCheck size={14} className="text-success flex-shrink-0" />{f}
+                            </li>
+                          ))}
+                        </ul>
+                        <button
+                          className="btn btn-primary w-100"
+                          onClick={() => checkoutMutation.mutate('pro')}
+                          disabled={checkoutMutation.isPending}
+                        >
+                          {checkoutMutation.isPending ? 'Redirecting…' : 'Upgrade to Pro'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {billingStatus.hasTeamPlan && (
+                  <div className="col-md-6">
+                    <div className="card border-indigo">
+                      <div className="card-body">
+                        <div className="d-flex justify-content-between align-items-start mb-2">
+                          <h3 className="card-title mb-0">Team</h3>
+                          <span className="badge bg-indigo-lt">Multi-user</span>
+                        </div>
+                        <p className="text-secondary small mb-3">Everything in Pro, plus team features.</p>
+                        <ul className="list-unstyled small mb-3">
+                          {['Everything in Pro', 'Multiple team members', 'Role-based access', 'Dedicated support'].map((f) => (
+                            <li key={f} className="d-flex align-items-center gap-1 mb-1">
+                              <IconCheck size={14} className="text-success flex-shrink-0" />{f}
+                            </li>
+                          ))}
+                        </ul>
+                        <button
+                          className="btn btn-outline-indigo w-100"
+                          onClick={() => checkoutMutation.mutate('team')}
+                          disabled={checkoutMutation.isPending}
+                        >
+                          {checkoutMutation.isPending ? 'Redirecting…' : 'Upgrade to Team'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {!billingStatus.hasProPlan && !billingStatus.hasTeamPlan && (
+                  <div className="col-12">
+                    <div className="alert alert-warning d-flex align-items-center gap-2">
+                      <IconAlertCircle size={18} />
+                      <span>No billing plans have been configured yet. Ask your administrator to add plan Price IDs in the Admin console.</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ) : null}
       </div>
