@@ -105,7 +105,7 @@ router.get('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
 
 #### Currency Handling
 - Store currency values as **bigint** (pence/cents)
-- Frontend displays as formatted currency (£1.00)
+- Frontend displays as formatted currency ($1.00)
 - Calculations are done in pence to avoid floating-point errors
 
 ### Frontend Conventions
