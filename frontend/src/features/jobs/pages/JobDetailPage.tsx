@@ -10,6 +10,7 @@ import { LoadingSpinner } from '../../../components/LoadingSpinner';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { formatDate, formatPercent, getMarginColor } from '../../../utils';
 import { LineItemTable } from '../components/LineItemTable';
+import { TimeEntriesTab } from '../components/TimeEntriesTab';
 import {
   useCreateLineItem,
   useDeleteLineItem,
@@ -27,7 +28,7 @@ const statusOptions: JobStatus[] = ['draft', 'quoted', 'active', 'completed', 'i
 
 export const JobDetailPage = () => {
   const { id } = useParams();
-  const [tab, setTab] = useState<'overview' | 'line-items' | 'quote' | 'invoice'>('overview');
+  const [tab, setTab] = useState<'overview' | 'line-items' | 'quote' | 'invoice' | 'time'>('overview');
   const [deleteLineItemId, setDeleteLineItemId] = useState<string | null>(null);
   const { data: job, isLoading, isError, error } = useJob(id);
   const updateJob = useUpdateJob();
@@ -107,6 +108,7 @@ export const JobDetailPage = () => {
             <ul className="nav nav-tabs card-header-tabs">
               <li className="nav-item"><button className={`nav-link ${tab === 'overview' ? 'active' : ''}`} onClick={() => setTab('overview')}>Overview</button></li>
               <li className="nav-item"><button className={`nav-link ${tab === 'line-items' ? 'active' : ''}`} onClick={() => setTab('line-items')}>Line Items</button></li>
+              <li className="nav-item"><button className={`nav-link ${tab === 'time' ? 'active' : ''}`} onClick={() => setTab('time')}>Time</button></li>
               <li className="nav-item"><button className={`nav-link ${tab === 'quote' ? 'active' : ''}`} onClick={() => setTab('quote')}>Quote</button></li>
               <li className="nav-item"><button className={`nav-link ${tab === 'invoice' ? 'active' : ''}`} onClick={() => setTab('invoice')}>Invoice</button></li>
             </ul>
@@ -166,6 +168,8 @@ export const JobDetailPage = () => {
           </div>
         </div>
       ) : null}
+
+      {tab === 'time' ? <TimeEntriesTab jobId={job.id} /> : null}
 
       {tab === 'quote' ? (
         <div className="col-12">
