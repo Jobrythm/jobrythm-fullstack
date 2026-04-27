@@ -24,6 +24,13 @@ export interface UpdateSettingsPayload {
   stripeProfessionalAnnualPriceId?: string;
   stripeBusinessMonthlyPriceId?: string;
   stripeBusinessAnnualPriceId?: string;
+  smtpHost?: string;
+  smtpPort?: string;
+  smtpSecure?: boolean;
+  smtpUser?: string;
+  smtpPassword?: string;
+  smtpFromEmail?: string;
+  smtpFromName?: string;
 }
 
 export const adminGetUsers = async (): Promise<AdminUser[]> => {
@@ -57,5 +64,10 @@ export const adminUpdateSettings = async (payload: UpdateSettingsPayload): Promi
 
 export const adminGetStats = async (): Promise<AdminStats> => {
   const { data } = await apiClient.get<AdminStats>('/admin/stats');
+  return data;
+};
+
+export const adminTestEmail = async (to?: string): Promise<{ message: string }> => {
+  const { data } = await apiClient.post<{ message: string }>('/admin/settings/test-email', { to });
   return data;
 };

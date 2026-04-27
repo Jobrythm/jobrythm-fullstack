@@ -23,7 +23,7 @@ services:
       STRIPE_PRO_PRICE_ID: ${STRIPE_PRO_PRICE_ID:-}
       STRIPE_TEAM_PRICE_ID: ${STRIPE_TEAM_PRICE_ID:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
-      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-noreply@jobrythm.com}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-noreply@jobrythm.app}
     depends_on:
       postgres:
         condition: service_healthy

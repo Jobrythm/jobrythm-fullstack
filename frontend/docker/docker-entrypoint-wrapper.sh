@@ -17,7 +17,7 @@ case "${API_URL:-2}" in
     export NGINX_API_UPSTREAM="${NGINX_API_UPSTREAM:-https://api.jobrythm.aricummings.com/api}"
     ;;
   3)
-    export NGINX_API_UPSTREAM="${NGINX_API_UPSTREAM:-https://api.jobrythm.com/api}"
+    export NGINX_API_UPSTREAM="${NGINX_API_UPSTREAM:-https://api.jobrythm.app/api}"
     ;;
   *)
     export NGINX_API_UPSTREAM="${NGINX_API_UPSTREAM:-https://api.jobrythm.aricummings.com/api}"

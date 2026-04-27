@@ -8,6 +8,7 @@ import { QuoteStatus } from '../types/enums.js';
 import { addDays } from 'date-fns';
 import { getNextNumber } from '../utils/numberSequence.js';
 import { calculateTotals } from '../utils/calculations.js';
+import { sendQuoteEmail } from '../utils/email.js';
 
 const router = Router();
 
@@ -165,13 +166,14 @@ router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   }
 });
 
-// Send quote (stub - would integrate with email service)
+// Send quote (integrates with SMTP email service)
 router.post('/:id/send', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const quoteRepository = AppDataSource.getRepository(Quote);
     const quote = await quoteRepository
       .createQueryBuilder('quote')
       .leftJoinAndSelect('quote.job', 'job')
+      .leftJoinAndSelect('job.client', 'client')
       .where('quote.id = :id', { id: req.params.id })
       .andWhere('job.userId = :userId', { userId: req.user!.userId })
       .getOne();
@@ -186,7 +188,24 @@ router.post('/:id/send', async (req: AuthRequest, res: Response): Promise<void> 
 
     await quoteRepository.save(quote);
 
-    // TODO: Send email with PDF attachment
+    // Send email to client if they have an email address on file
+    const clientEmail = quote.job?.client?.email;
+    if (clientEmail) {
+      try {
+        const userRepository = AppDataSource.getRepository(User);
+        const user = await userRepository.findOne({ where: { id: req.user!.userId } });
+        await sendQuoteEmail(
+          clientEmail,
+          quote.quoteNumber,
+          quote.job.client!.name,
+          user?.companyName,
+        );
+      } catch (emailError) {
+        console.error('Failed to send quote email:', emailError);
+        // Email failure is non-fatal — the quote is already marked sent
+      }
+    }
+
     res.json({ message: 'Quote sent successfully', quote });
   } catch (error) {
     console.error('Send quote error:', error);

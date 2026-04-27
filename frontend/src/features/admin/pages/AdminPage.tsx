@@ -6,6 +6,7 @@ import {
   IconEye,
   IconEyeOff,
   IconFileInvoice,
+  IconMail,
   IconPlus,
   IconSettings,
   IconShieldLock,
@@ -34,6 +35,7 @@ import {
   useAdminStats,
   useAdminUpdateUser,
   useAdminUsers,
+  useTestEmail,
   useUpdateAdminSettings,
 } from '../hooks/useAdminUsers';
 
@@ -71,9 +73,21 @@ const stripeSettingsSchema = z.object({
   stripeBusinessAnnualPriceId: z.string().optional(),
 });
 
+const emailSettingsSchema = z.object({
+  smtpHost: z.string().optional(),
+  smtpPort: z.string().optional(),
+  smtpSecure: z.boolean().optional(),
+  smtpUser: z.string().optional(),
+  smtpPassword: z.string().optional(),
+  smtpFromEmail: z.string().optional(),
+  smtpFromName: z.string().optional(),
+  testEmailTo: z.string().optional(),
+});
+
 type CreateValues = z.infer<typeof createSchema>;
 type EditValues = z.infer<typeof editSchema>;
 type StripeSettingsValues = z.infer<typeof stripeSettingsSchema>;
+type EmailSettingsValues = z.infer<typeof emailSettingsSchema>;
 
 // ── Create user modal ──────────────────────────────────────────────────────────
 const CreateUserModal = ({ onClose }: { onClose: () => void }) => {
@@ -574,13 +588,269 @@ const StripeSettingsPanel = () => {
   );
 };
 
+// ── Email Settings panel ───────────────────────────────────────────────────────
+const EmailSettingsPanel = () => {
+  const { data: settings, isLoading } = useAdminSettings();
+  const updateSettings = useUpdateAdminSettings();
+  const testEmail = useTestEmail();
+  const [showPassword, setShowPassword] = useState(false);
+
+  const form = useForm<EmailSettingsValues>({
+    resolver: zodResolver(emailSettingsSchema),
+    defaultValues: {
+      smtpHost: '',
+      smtpPort: '',
+      smtpSecure: false,
+      smtpUser: '',
+      smtpPassword: '',
+      smtpFromEmail: '',
+      smtpFromName: '',
+      testEmailTo: '',
+    },
+  });
+
+  useEffect(() => {
+    if (settings) {
+      form.reset({
+        smtpHost: settings.smtpHost ?? '',
+        smtpPort: settings.smtpPort ?? '',
+        smtpSecure: settings.smtpSecure ?? false,
+        smtpUser: settings.smtpUser ?? '',
+        smtpPassword: '',
+        smtpFromEmail: settings.smtpFromEmail ?? '',
+        smtpFromName: settings.smtpFromName ?? '',
+        testEmailTo: '',
+      });
+    }
+  }, [settings, form]);
+
+  const onSubmit = (values: EmailSettingsValues) => {
+    const payload: Record<string, string | boolean> = {};
+    if (values.smtpHost !== undefined) payload.smtpHost = values.smtpHost?.trim() ?? '';
+    if (values.smtpPort !== undefined) payload.smtpPort = values.smtpPort?.trim() ?? '';
+    if (values.smtpSecure !== undefined) payload.smtpSecure = values.smtpSecure;
+    if (values.smtpUser !== undefined) payload.smtpUser = values.smtpUser?.trim() ?? '';
+    if (values.smtpPassword?.trim()) payload.smtpPassword = values.smtpPassword.trim();
+    if (values.smtpFromEmail !== undefined) payload.smtpFromEmail = values.smtpFromEmail?.trim() ?? '';
+    if (values.smtpFromName !== undefined) payload.smtpFromName = values.smtpFromName?.trim() ?? '';
+
+    updateSettings.mutate(payload, {
+      onSuccess: () => {
+        toast.success('Email settings saved');
+        form.setValue('smtpPassword', '');
+      },
+      onError: (err: Error) => toast.error(err.message),
+    });
+  };
+
+  const handleTestEmail = () => {
+    const to = form.getValues('testEmailTo')?.trim() || undefined;
+    testEmail.mutate(to, {
+      onSuccess: (res) => toast.success(res.message),
+      onError: (err: Error) => toast.error(err.message),
+    });
+  };
+
+  if (isLoading) return <div className="text-secondary py-3">Loading settings…</div>;
+
+  return (
+    <div className="row g-4">
+      {/* Setup guide */}
+      <div className="col-12">
+        <div className="alert alert-info" role="alert">
+          <div className="d-flex gap-2 align-items-start">
+            <IconAlertCircle size={18} className="mt-1 flex-shrink-0" />
+            <div>
+              <h4 className="alert-heading h6 mb-2">Proton Mail SMTP settings</h4>
+              <p className="mb-1 small">To send email via Proton Mail, use the following SMTP settings:</p>
+              <ul className="mb-2 ps-3 small">
+                <li><strong>Host:</strong> <code>smtp.protonmail.ch</code></li>
+                <li><strong>Port:</strong> <code>587</code> (STARTTLS, recommended) or <code>465</code> (SSL/TLS — enable "Secure" below)</li>
+                <li><strong>Username:</strong> your full Proton Mail address (e.g. <code>you@proton.me</code>)</li>
+                <li><strong>Password:</strong> your <strong>Proton Mail Bridge password</strong> (not your account login). Get it from the Proton Mail Bridge app → Settings.</li>
+                <li><strong>From email:</strong> same as your username</li>
+              </ul>
+              <p className="mb-0 small text-secondary">Enable "Secure (SSL/TLS)" only if using port 465. For port 587, leave it unchecked — the connection upgrades via STARTTLS automatically.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Status card */}
+      <div className="col-12">
+        <div className={`card card-sm ${settings?.emailConfigured ? 'border-success' : 'border-warning'}`}>
+          <div className="card-body py-2 px-3">
+            <div className="d-flex align-items-center gap-2">
+              {settings?.emailConfigured
+                ? <IconCheck size={16} className="text-success" />
+                : <IconAlertCircle size={16} className="text-warning" />
+              }
+              <span className="fw-semibold small">
+                {settings?.emailConfigured ? 'Email configured' : 'Email not configured'}
+              </span>
+              {settings?.emailConfigured && settings.smtpHost && (
+                <span className="text-secondary small ms-1">via {settings.smtpHost}:{settings.smtpPort || '587'}</span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Settings form */}
+      <div className="col-12">
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title mb-0">
+              <IconSettings size={16} className="me-2" />
+              SMTP configuration
+            </h3>
+          </div>
+          <div className="card-body">
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <div className="row g-3">
+                <div className="col-md-8">
+                  <label className="form-label">SMTP Host</label>
+                  <input
+                    className="form-control font-monospace"
+                    placeholder="smtp.protonmail.ch"
+                    {...form.register('smtpHost')}
+                  />
+                </div>
+                <div className="col-md-2">
+                  <label className="form-label">Port</label>
+                  <input
+                    className="form-control font-monospace"
+                    placeholder="587"
+                    {...form.register('smtpPort')}
+                  />
+                </div>
+                <div className="col-md-2 d-flex align-items-end">
+                  <label className="form-check form-switch mb-2">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      role="switch"
+                      {...form.register('smtpSecure')}
+                    />
+                    <span className="form-check-label">Secure (SSL/TLS)</span>
+                  </label>
+                </div>
+
+                <div className="col-md-6">
+                  <label className="form-label">SMTP Username</label>
+                  <input
+                    className="form-control"
+                    placeholder="you@proton.me"
+                    autoComplete="username"
+                    {...form.register('smtpUser')}
+                  />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label">
+                    SMTP Password
+                    <span className="text-secondary ms-1 small">(leave blank to keep existing)</span>
+                  </label>
+                  <div className="input-group">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      className="form-control"
+                      placeholder={settings?.smtpPasswordSet ? 'Enter new password to replace' : 'Proton Mail Bridge password'}
+                      autoComplete="new-password"
+                      {...form.register('smtpPassword')}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary"
+                      onClick={() => setShowPassword((v) => !v)}
+                    >
+                      {showPassword ? <IconEyeOff size={14} /> : <IconEye size={14} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="col-12"><hr className="my-1" /></div>
+
+                <div className="col-md-6">
+                  <label className="form-label">From Email</label>
+                  <input
+                    className="form-control"
+                    placeholder="you@proton.me"
+                    {...form.register('smtpFromEmail')}
+                  />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label">From Name</label>
+                  <input
+                    className="form-control"
+                    placeholder="Jobrythm"
+                    {...form.register('smtpFromName')}
+                  />
+                </div>
+
+                <div className="col-12">
+                  <button className="btn btn-primary" type="submit" disabled={updateSettings.isPending}>
+                    {updateSettings.isPending ? 'Saving…' : 'Save email settings'}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      {/* Test email */}
+      <div className="col-12">
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title mb-0">
+              <IconMail size={16} className="me-2" />
+              Send test email
+            </h3>
+          </div>
+          <div className="card-body">
+            <p className="text-secondary small mb-3">
+              Send a test email to verify your SMTP configuration is working.
+              Leave the field blank to send to your own admin email.
+            </p>
+            <div className="row g-2 align-items-end">
+              <div className="col-md-6">
+                <label className="form-label">Recipient (optional)</label>
+                <input
+                  className="form-control"
+                  placeholder="test@example.com"
+                  {...form.register('testEmailTo')}
+                />
+              </div>
+              <div className="col-auto">
+                <button
+                  className="btn btn-secondary"
+                  type="button"
+                  onClick={handleTestEmail}
+                  disabled={testEmail.isPending || !settings?.emailConfigured}
+                >
+                  {testEmail.isPending ? 'Sending…' : 'Send test email'}
+                </button>
+              </div>
+              {!settings?.emailConfigured && (
+                <div className="col-12">
+                  <span className="text-warning small">Save your SMTP settings first before sending a test email.</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ── Main page ──────────────────────────────────────────────────────────────────
 export const AdminPage = () => {
   const { user: currentUser } = useAuth();
   const { data: users = [], isLoading, isError, error } = useAdminUsers();
   const deleteUser = useAdminDeleteUser();
 
-  const [tab, setTab] = useState<'dashboard' | 'users' | 'settings'>('dashboard');
+  const [tab, setTab] = useState<'dashboard' | 'users' | 'settings' | 'email'>('dashboard');
   const [showCreate, setShowCreate] = useState(false);
   const [editTarget, setEditTarget] = useState<AdminUser | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
@@ -650,6 +920,15 @@ export const AdminPage = () => {
                 Stripe / Billing
               </button>
             </li>
+            <li className="nav-item">
+              <button
+                className={`nav-link ${tab === 'email' ? 'active' : ''}`}
+                onClick={() => setTab('email')}
+              >
+                <IconMail size={15} className="me-1" />
+                Email / SMTP
+              </button>
+            </li>
           </ul>
         </div>
       </div>
@@ -657,6 +936,8 @@ export const AdminPage = () => {
       {tab === 'dashboard' && <DashboardPanel />}
 
       {tab === 'settings' && <StripeSettingsPanel />}
+
+      {tab === 'email' && <EmailSettingsPanel />}
 
       {tab === 'users' && (
         <>
