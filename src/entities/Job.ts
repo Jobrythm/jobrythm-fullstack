@@ -38,6 +38,12 @@ export class Job extends BaseEntity {
   @Column({ nullable: true })
   endDate?: Date;
 
+  @Column({ type: 'boolean', default: false })
+  isRecurring!: boolean;
+
+  @Column({ nullable: true })
+  recurringTemplateId?: string;
+
   @OneToMany('LineItem', 'job', { cascade: true })
   lineItems!: Relation<LineItem[]>;
 

@@ -12,6 +12,7 @@ import { formatDate, formatPercent, getMarginColor } from '../../../utils';
 import { AiSuggestPanel } from '../components/AiSuggestPanel';
 import { AttachmentsTab } from '../components/AttachmentsTab';
 import { ChecklistTab } from '../components/ChecklistTab';
+import { MessagesTab } from '../components/MessagesTab';
 import { LineItemTable } from '../components/LineItemTable';
 import { TimeEntriesTab } from '../components/TimeEntriesTab';
 import {
@@ -31,7 +32,7 @@ const statusOptions: JobStatus[] = ['draft', 'quoted', 'active', 'completed', 'i
 
 export const JobDetailPage = () => {
   const { id } = useParams();
-  const [tab, setTab] = useState<'overview' | 'line-items' | 'checklist' | 'files' | 'quote' | 'invoice' | 'time'>('overview');
+  const [tab, setTab] = useState<'overview' | 'line-items' | 'checklist' | 'files' | 'messages' | 'quote' | 'invoice' | 'time'>('overview');
   const [deleteLineItemId, setDeleteLineItemId] = useState<string | null>(null);
   const { data: job, isLoading, isError, error } = useJob(id);
   const updateJob = useUpdateJob();
@@ -114,6 +115,7 @@ export const JobDetailPage = () => {
               <li className="nav-item"><button className={`nav-link ${tab === 'time' ? 'active' : ''}`} onClick={() => setTab('time')}>Time</button></li>
               <li className="nav-item"><button className={`nav-link ${tab === 'checklist' ? 'active' : ''}`} onClick={() => setTab('checklist')}>Checklist</button></li>
               <li className="nav-item"><button className={`nav-link ${tab === 'files' ? 'active' : ''}`} onClick={() => setTab('files')}>Files</button></li>
+              <li className="nav-item"><button className={`nav-link ${tab === 'messages' ? 'active' : ''}`} onClick={() => setTab('messages')}>Messages</button></li>
               <li className="nav-item"><button className={`nav-link ${tab === 'quote' ? 'active' : ''}`} onClick={() => setTab('quote')}>Quote</button></li>
               <li className="nav-item"><button className={`nav-link ${tab === 'invoice' ? 'active' : ''}`} onClick={() => setTab('invoice')}>Invoice</button></li>
             </ul>
@@ -199,6 +201,8 @@ export const JobDetailPage = () => {
       {tab === 'checklist' ? <ChecklistTab jobId={job.id} /> : null}
 
       {tab === 'files' ? <AttachmentsTab jobId={job.id} /> : null}
+
+      {tab === 'messages' ? <MessagesTab jobId={job.id} /> : null}
 
       {tab === 'quote' ? (
         <div className="col-12">

@@ -13,6 +13,7 @@ import {
   IconShieldLock,
   IconCrown,
   IconUsersGroup,
+  IconRepeat,
 } from '@tabler/icons-react';
 import { type ComponentType, type ReactNode, useMemo, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
@@ -106,6 +107,7 @@ export const AppLayout = () => {
           { to: '/invoices', label: 'Invoices', icon: IconReceipt },
           { to: '/expenses', label: 'Expenses', icon: IconReceipt2 },
           { to: '/reports', label: 'Reports', icon: IconChartBar },
+          { to: '/recurring', label: 'Recurring Jobs', icon: IconRepeat },
         ] : []),
         { divider: true },
         ...(!isMember ? [{ to: '/settings', label: 'Settings', icon: IconSettings }] : []),

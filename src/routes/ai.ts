@@ -92,12 +92,11 @@ Please suggest 3–8 appropriate line items for this job.`;
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
-      response_format: { type: 'json_object' },
       temperature: 0.3,
       max_tokens: 1024,
     });
 
-    const raw = completion.choices[0]?.message?.content ?? '{}';
+    const raw = extractJson(completion.choices[0]?.message?.content ?? '{}');
     let parsed: { lineItems?: unknown[] };
     try {
       parsed = JSON.parse(raw) as { lineItems?: unknown[] };
@@ -142,6 +141,16 @@ async function buildAiClient(): Promise<{ client: OpenAI; model: string } | null
   };
 }
 
+// Extract JSON from a model response that may be wrapped in markdown code fences
+function extractJson(raw: string): string {
+  const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fenced) return fenced[1].trim();
+  const firstBrace = raw.indexOf('{');
+  const lastBrace = raw.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace > firstBrace) return raw.slice(firstBrace, lastBrace + 1);
+  return raw.trim();
+}
+
 // POST /api/ai/suggest-client
 // Parses a plain-English description into structured client fields.
 router.post('/ai/suggest-client', async (req: AuthRequest, res: Response): Promise<void> => {
@@ -178,12 +187,11 @@ Respond with ONLY the JSON object. Do not wrap in markdown.`,
         },
         { role: 'user', content: description.trim() },
       ],
-      response_format: { type: 'json_object' },
       temperature: 0.2,
       max_tokens: 512,
     });
 
-    const raw = completion.choices[0]?.message?.content ?? '{}';
+    const raw = extractJson(completion.choices[0]?.message?.content ?? '{}');
     let parsed: Record<string, unknown>;
     try {
       parsed = JSON.parse(raw) as Record<string, unknown>;
@@ -244,12 +252,11 @@ Respond with ONLY the JSON object. Do not wrap in markdown.`,
         },
         { role: 'user', content: description.trim() },
       ],
-      response_format: { type: 'json_object' },
       temperature: 0.2,
       max_tokens: 512,
     });
 
-    const raw = completion.choices[0]?.message?.content ?? '{}';
+    const raw = extractJson(completion.choices[0]?.message?.content ?? '{}');
     let parsed: Record<string, unknown>;
     try {
       parsed = JSON.parse(raw) as Record<string, unknown>;

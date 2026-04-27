@@ -25,6 +25,7 @@ import { SchedulePage } from '../features/schedule/pages/SchedulePage';
 import { TeamPage } from '../features/team/pages/TeamPage';
 import { ExpensesPage } from '../features/expenses/pages/ExpensesPage';
 import { ReportingPage } from '../features/reports/pages/ReportingPage';
+import { RecurringJobsPage } from '../features/recurring/pages/RecurringJobsPage';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -56,6 +57,7 @@ export const router = createBrowserRouter([
           { path: '/team', element: <TeamPage /> },
           { path: '/expenses', element: <ExpensesPage /> },
           { path: '/reports', element: <ReportingPage /> },
+          { path: '/recurring', element: <RecurringJobsPage /> },
           { path: '/quotes', element: <QuotesPage /> },
           { path: '/quotes/:id', element: <QuoteDetailPage /> },
           { path: '/invoices', element: <InvoicesPage /> },
