@@ -16,21 +16,29 @@ export interface UpdateUserPayload {
 }
 
 export interface UpdateSettingsPayload {
+  // Stripe
   stripeApiKey?: string;
+  stripePublishableKey?: string;
   stripeWebhookSecret?: string;
+  stripePortalConfigurationId?: string;
   stripeStarterMonthlyPriceId?: string;
   stripeStarterAnnualPriceId?: string;
   stripeProfessionalMonthlyPriceId?: string;
   stripeProfessionalAnnualPriceId?: string;
   stripeBusinessMonthlyPriceId?: string;
   stripeBusinessAnnualPriceId?: string;
+  // General
+  appUrl?: string;
+  // Email
   smtpHost?: string;
   smtpPort?: string;
-  smtpSecure?: boolean;
   smtpUser?: string;
   smtpPassword?: string;
   smtpFromEmail?: string;
   smtpFromName?: string;
+  // AI / GitHub Models
+  githubModelsToken?: string;
+  githubModelsModel?: string;
 }
 
 export const adminGetUsers = async (): Promise<AdminUser[]> => {

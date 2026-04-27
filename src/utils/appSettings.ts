@@ -23,6 +23,7 @@ export async function setSetting(key: string, value: string | null): Promise<voi
 
 export interface StripeConfig {
   apiKey: string | null;
+  publishableKey: string | null;
   webhookSecret: string | null;
   portalConfigurationId: string | null;
   starterMonthlyPriceId: string | null;
@@ -36,6 +37,7 @@ export interface StripeConfig {
 export async function getStripeConfig(): Promise<StripeConfig> {
   const [
     apiKey,
+    publishableKey,
     webhookSecret,
     portalConfigurationId,
     starterMonthlyPriceId,
@@ -46,6 +48,7 @@ export async function getStripeConfig(): Promise<StripeConfig> {
     businessAnnualPriceId,
   ] = await Promise.all([
     getSetting('stripe_api_key'),
+    getSetting('stripe_publishable_key'),
     getSetting('stripe_webhook_secret'),
     getSetting('stripe_portal_configuration_id'),
     getSetting('stripe_starter_monthly_price_id'),
@@ -58,14 +61,37 @@ export async function getStripeConfig(): Promise<StripeConfig> {
 
   return {
     apiKey: apiKey ?? process.env.STRIPE_API_KEY ?? null,
+    publishableKey: publishableKey ?? process.env.STRIPE_PUBLISHABLE_KEY ?? null,
     webhookSecret: webhookSecret ?? process.env.STRIPE_WEBHOOK_SECRET ?? null,
-    portalConfigurationId:      portalConfigurationId      ?? process.env.STRIPE_PORTAL_CONFIGURATION_ID      ?? 'bpc_1TQiJWIvlX8po9Ur7uSuYtZi',
-    starterMonthlyPriceId:      starterMonthlyPriceId      ?? process.env.STRIPE_STARTER_MONTHLY_PRICE_ID      ?? 'price_1TQhzWIvlX8po9UrYjYdr0aV',
-    starterAnnualPriceId:       starterAnnualPriceId       ?? process.env.STRIPE_STARTER_ANNUAL_PRICE_ID       ?? 'price_1TQi90IvlX8po9UrLbUmbW0v',
-    professionalMonthlyPriceId: professionalMonthlyPriceId ?? process.env.STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID ?? 'price_1TQhzyIvlX8po9UrYYoF3hRj',
-    professionalAnnualPriceId:  professionalAnnualPriceId  ?? process.env.STRIPE_PROFESSIONAL_ANNUAL_PRICE_ID  ?? 'price_1TQiA8IvlX8po9Urs2e8IPV9',
-    businessMonthlyPriceId:     businessMonthlyPriceId     ?? process.env.STRIPE_BUSINESS_MONTHLY_PRICE_ID     ?? 'price_1TQi0HIvlX8po9UrVSzLreFG',
-    businessAnnualPriceId:      businessAnnualPriceId      ?? process.env.STRIPE_BUSINESS_ANNUAL_PRICE_ID      ?? 'price_1TQiArIvlX8po9UrZmYbnmt2',
+    portalConfigurationId:      portalConfigurationId      ?? process.env.STRIPE_PORTAL_CONFIGURATION_ID      ?? null,
+    starterMonthlyPriceId:      starterMonthlyPriceId      ?? process.env.STRIPE_STARTER_MONTHLY_PRICE_ID      ?? null,
+    starterAnnualPriceId:       starterAnnualPriceId       ?? process.env.STRIPE_STARTER_ANNUAL_PRICE_ID       ?? null,
+    professionalMonthlyPriceId: professionalMonthlyPriceId ?? process.env.STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID ?? null,
+    professionalAnnualPriceId:  professionalAnnualPriceId  ?? process.env.STRIPE_PROFESSIONAL_ANNUAL_PRICE_ID  ?? null,
+    businessMonthlyPriceId:     businessMonthlyPriceId     ?? process.env.STRIPE_BUSINESS_MONTHLY_PRICE_ID     ?? null,
+    businessAnnualPriceId:      businessAnnualPriceId      ?? process.env.STRIPE_BUSINESS_ANNUAL_PRICE_ID      ?? null,
+  };
+}
+
+/** Returns the app's base URL for constructing portal links in emails. DB setting first, then env, then localhost fallback. */
+export async function getAppUrl(): Promise<string> {
+  const stored = await getSetting('app_url');
+  return (stored ?? process.env.APP_URL ?? 'http://localhost:8080').replace(/\/$/, '');
+}
+
+export interface GitHubModelsConfig {
+  token: string | null;
+  model: string | null;
+}
+
+export async function getGitHubModelsConfig(): Promise<GitHubModelsConfig> {
+  const [token, model] = await Promise.all([
+    getSetting('github_models_token'),
+    getSetting('github_models_model'),
+  ]);
+  return {
+    token: token ?? process.env.GITHUB_MODELS_TOKEN ?? null,
+    model: model ?? process.env.GITHUB_MODELS_MODEL ?? 'gpt-4o',
   };
 }
 

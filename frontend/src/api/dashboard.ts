@@ -36,6 +36,11 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
   };
 };
 
+export const loadDemoData = async (): Promise<{ message: string }> => {
+  const { data } = await apiClient.post<{ message: string }>('/demo-data');
+  return data;
+};
+
 export const getBillingStatus = async (): Promise<BillingStatus> => {
   const { data } = await apiClient.get<BillingStatus>('/billing/status');
   return data;

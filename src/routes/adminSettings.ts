@@ -1,23 +1,12 @@
 import { Router, Response } from 'express';
 import { authenticateToken, requireAdmin, AuthRequest } from '../middleware/auth.js';
-import { getStripeConfig, getEmailConfig, setSetting } from '../utils/appSettings.js';
+import { getStripeConfig, getEmailConfig, getSetting, setSetting, getGitHubModelsConfig } from '../utils/appSettings.js';
 import { sendEmail } from '../utils/email.js';
 
 const router = Router();
 
 router.use(authenticateToken);
 router.use(requireAdmin);
-
-const PRICE_SETTING_KEYS = [
-  'stripe_starter_monthly_price_id',
-  'stripe_starter_annual_price_id',
-  'stripe_professional_monthly_price_id',
-  'stripe_professional_annual_price_id',
-  'stripe_business_monthly_price_id',
-  'stripe_business_annual_price_id',
-] as const;
-
-type PriceSettingKey = typeof PRICE_SETTING_KEYS[number];
 
 function maskKey(value: string | null): string {
   if (!value) return '';
@@ -29,27 +18,38 @@ function maskKey(value: string | null): string {
 // GET /api/admin/settings
 router.get('/', async (_req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const [config, emailConfig] = await Promise.all([getStripeConfig(), getEmailConfig()]);
+    const [config, emailConfig, appUrl, aiConfig] = await Promise.all([
+      getStripeConfig(),
+      getEmailConfig(),
+      getSetting('app_url'),
+      getGitHubModelsConfig(),
+    ]);
     res.json({
       stripeApiKey: maskKey(config.apiKey),
       stripeApiKeySet: Boolean(config.apiKey),
+      stripePublishableKey: config.publishableKey ?? '',
       stripeWebhookSecret: maskKey(config.webhookSecret),
       stripeWebhookSecretSet: Boolean(config.webhookSecret),
+      stripePortalConfigurationId: config.portalConfigurationId ?? '',
       stripeStarterMonthlyPriceId: config.starterMonthlyPriceId ?? '',
       stripeStarterAnnualPriceId: config.starterAnnualPriceId ?? '',
       stripeProfessionalMonthlyPriceId: config.professionalMonthlyPriceId ?? '',
       stripeProfessionalAnnualPriceId: config.professionalAnnualPriceId ?? '',
       stripeBusinessMonthlyPriceId: config.businessMonthlyPriceId ?? '',
       stripeBusinessAnnualPriceId: config.businessAnnualPriceId ?? '',
+      appUrl: appUrl ?? '',
       smtpHost: emailConfig.host ?? '',
       smtpPort: emailConfig.port?.toString() ?? '',
-      smtpSecure: emailConfig.secure,
       smtpUser: emailConfig.user ?? '',
       smtpPassword: maskKey(emailConfig.password),
       smtpPasswordSet: Boolean(emailConfig.password),
       smtpFromEmail: emailConfig.fromEmail ?? '',
       smtpFromName: emailConfig.fromName ?? '',
       emailConfigured: Boolean(emailConfig.host && emailConfig.user && emailConfig.password),
+      githubModelsToken: maskKey(aiConfig.token),
+      githubModelsTokenSet: Boolean(aiConfig.token),
+      githubModelsModel: aiConfig.model ?? 'gpt-4o',
+      aiConfigured: Boolean(aiConfig.token),
     });
   } catch (error) {
     console.error('Get settings error:', error);
@@ -62,74 +62,93 @@ router.put('/', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const {
       stripeApiKey,
+      stripePublishableKey,
       stripeWebhookSecret,
+      stripePortalConfigurationId,
       stripeStarterMonthlyPriceId,
       stripeStarterAnnualPriceId,
       stripeProfessionalMonthlyPriceId,
       stripeProfessionalAnnualPriceId,
       stripeBusinessMonthlyPriceId,
       stripeBusinessAnnualPriceId,
+      appUrl,
       smtpHost,
       smtpPort,
-      smtpSecure,
       smtpUser,
       smtpPassword,
       smtpFromEmail,
       smtpFromName,
-    }: Partial<Record<string, string>> & { smtpSecure?: string | boolean } = req.body;
+      githubModelsToken,
+      githubModelsModel,
+    }: Partial<Record<string, string>> = req.body;
 
     const secretUpdates: Array<[string, string]> = [];
-    const priceUpdates: Array<[PriceSettingKey, string]> = [];
+    const generalUpdates: Array<[string, string | null]> = [];
     const emailUpdates: Array<[string, string | null]> = [];
 
-    // Secrets: only update if non-empty
+    // Secrets: only update if non-empty (blank = keep existing)
     if (stripeApiKey?.trim()) secretUpdates.push(['stripe_api_key', stripeApiKey.trim()]);
     if (stripeWebhookSecret?.trim()) secretUpdates.push(['stripe_webhook_secret', stripeWebhookSecret.trim()]);
+    if (githubModelsToken?.trim()) secretUpdates.push(['github_models_token', githubModelsToken.trim()]);
 
-    // Price IDs: always update if provided (can clear with empty string)
-    if (stripeStarterMonthlyPriceId !== undefined) priceUpdates.push(['stripe_starter_monthly_price_id', stripeStarterMonthlyPriceId.trim()]);
-    if (stripeStarterAnnualPriceId !== undefined) priceUpdates.push(['stripe_starter_annual_price_id', stripeStarterAnnualPriceId.trim()]);
-    if (stripeProfessionalMonthlyPriceId !== undefined) priceUpdates.push(['stripe_professional_monthly_price_id', stripeProfessionalMonthlyPriceId.trim()]);
-    if (stripeProfessionalAnnualPriceId !== undefined) priceUpdates.push(['stripe_professional_annual_price_id', stripeProfessionalAnnualPriceId.trim()]);
-    if (stripeBusinessMonthlyPriceId !== undefined) priceUpdates.push(['stripe_business_monthly_price_id', stripeBusinessMonthlyPriceId.trim()]);
-    if (stripeBusinessAnnualPriceId !== undefined) priceUpdates.push(['stripe_business_annual_price_id', stripeBusinessAnnualPriceId.trim()]);
+    // Non-secret Stripe / general settings: always update if provided
+    if (stripePublishableKey !== undefined) generalUpdates.push(['stripe_publishable_key', stripePublishableKey.trim() || null]);
+    if (stripePortalConfigurationId !== undefined) generalUpdates.push(['stripe_portal_configuration_id', stripePortalConfigurationId.trim() || null]);
+    if (stripeStarterMonthlyPriceId !== undefined) generalUpdates.push(['stripe_starter_monthly_price_id', stripeStarterMonthlyPriceId.trim() || null]);
+    if (stripeStarterAnnualPriceId !== undefined) generalUpdates.push(['stripe_starter_annual_price_id', stripeStarterAnnualPriceId.trim() || null]);
+    if (stripeProfessionalMonthlyPriceId !== undefined) generalUpdates.push(['stripe_professional_monthly_price_id', stripeProfessionalMonthlyPriceId.trim() || null]);
+    if (stripeProfessionalAnnualPriceId !== undefined) generalUpdates.push(['stripe_professional_annual_price_id', stripeProfessionalAnnualPriceId.trim() || null]);
+    if (stripeBusinessMonthlyPriceId !== undefined) generalUpdates.push(['stripe_business_monthly_price_id', stripeBusinessMonthlyPriceId.trim() || null]);
+    if (stripeBusinessAnnualPriceId !== undefined) generalUpdates.push(['stripe_business_annual_price_id', stripeBusinessAnnualPriceId.trim() || null]);
+    if (appUrl !== undefined) generalUpdates.push(['app_url', appUrl.trim() || null]);
+    if (githubModelsModel !== undefined) generalUpdates.push(['github_models_model', githubModelsModel.trim() || null]);
 
-    // Email / SMTP: always update if provided
+    // Email / SMTP
     if (smtpHost !== undefined) emailUpdates.push(['smtp_host', smtpHost.trim() || null]);
     if (smtpPort !== undefined) emailUpdates.push(['smtp_port', smtpPort.trim() || null]);
-    if (smtpSecure !== undefined) emailUpdates.push(['smtp_secure', String(smtpSecure)]);
     if (smtpUser !== undefined) emailUpdates.push(['smtp_user', smtpUser.trim() || null]);
     if (smtpPassword?.trim()) emailUpdates.push(['smtp_password', smtpPassword.trim()]);
     if (smtpFromEmail !== undefined) emailUpdates.push(['smtp_from_email', smtpFromEmail.trim() || null]);
     if (smtpFromName !== undefined) emailUpdates.push(['smtp_from_name', smtpFromName.trim() || null]);
 
-    const allUpdates = [...secretUpdates, ...priceUpdates] as Array<[string, string]>;
     await Promise.all([
-      ...allUpdates.map(([key, value]) => setSetting(key, value || null)),
+      ...secretUpdates.map(([key, value]) => setSetting(key, value)),
+      ...generalUpdates.map(([key, value]) => setSetting(key, value)),
       ...emailUpdates.map(([key, value]) => setSetting(key, value)),
     ]);
 
-    const [config, emailConfig] = await Promise.all([getStripeConfig(), getEmailConfig()]);
+    const [config, emailConfig, savedAppUrl, aiConfig] = await Promise.all([
+      getStripeConfig(),
+      getEmailConfig(),
+      getSetting('app_url'),
+      getGitHubModelsConfig(),
+    ]);
     res.json({
       stripeApiKey: maskKey(config.apiKey),
       stripeApiKeySet: Boolean(config.apiKey),
+      stripePublishableKey: config.publishableKey ?? '',
       stripeWebhookSecret: maskKey(config.webhookSecret),
       stripeWebhookSecretSet: Boolean(config.webhookSecret),
+      stripePortalConfigurationId: config.portalConfigurationId ?? '',
       stripeStarterMonthlyPriceId: config.starterMonthlyPriceId ?? '',
       stripeStarterAnnualPriceId: config.starterAnnualPriceId ?? '',
       stripeProfessionalMonthlyPriceId: config.professionalMonthlyPriceId ?? '',
       stripeProfessionalAnnualPriceId: config.professionalAnnualPriceId ?? '',
       stripeBusinessMonthlyPriceId: config.businessMonthlyPriceId ?? '',
       stripeBusinessAnnualPriceId: config.businessAnnualPriceId ?? '',
+      appUrl: savedAppUrl ?? '',
       smtpHost: emailConfig.host ?? '',
       smtpPort: emailConfig.port?.toString() ?? '',
-      smtpSecure: emailConfig.secure,
       smtpUser: emailConfig.user ?? '',
       smtpPassword: maskKey(emailConfig.password),
       smtpPasswordSet: Boolean(emailConfig.password),
       smtpFromEmail: emailConfig.fromEmail ?? '',
       smtpFromName: emailConfig.fromName ?? '',
       emailConfigured: Boolean(emailConfig.host && emailConfig.user && emailConfig.password),
+      githubModelsToken: maskKey(aiConfig.token),
+      githubModelsTokenSet: Boolean(aiConfig.token),
+      githubModelsModel: aiConfig.model ?? 'gpt-4o',
+      aiConfigured: Boolean(aiConfig.token),
     });
   } catch (error) {
     console.error('Update settings error:', error);

@@ -55,18 +55,30 @@ export async function sendQuoteEmail(
   quoteNumber: string,
   clientName: string,
   companyName?: string,
+  totalGross?: number,
+  portalUrl?: string,
 ): Promise<void> {
   const company = companyName ? ` from ${companyName}` : '';
+  const amountLine = totalGross !== undefined
+    ? `<p><strong>Amount: £${(totalGross / 100).toFixed(2)}</strong></p>`
+    : '';
+  const ctaButton = portalUrl
+    ? `<p style="margin-top:16px"><a href="${portalUrl}" style="background:#2563eb;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">View &amp; Approve Quote</a></p>`
+    : '';
+  const ctaText = portalUrl ? `\n\nView and approve your quote here: ${portalUrl}` : '';
+
   await sendEmail({
     to,
     subject: `Your Quote ${quoteNumber}${company}`,
     html: `
       <p>Hi ${clientName},</p>
-      <p>Please find your quote <strong>${quoteNumber}</strong> below${company}.</p>
+      <p>Please find your quote <strong>${quoteNumber}</strong> attached${company}.</p>
+      ${amountLine}
+      ${ctaButton}
       <p>If you have any questions, please don't hesitate to get in touch.</p>
       <p>Kind regards${companyName ? `,<br>${companyName}` : ''}</p>
     `,
-    text: `Hi ${clientName},\n\nPlease find your quote ${quoteNumber} below${company}.\n\nIf you have any questions, please don't hesitate to get in touch.\n\nKind regards${companyName ? `\n${companyName}` : ''}`,
+    text: `Hi ${clientName},\n\nPlease find your quote ${quoteNumber} below${company}.${ctaText}\n\nIf you have any questions, please don't hesitate to get in touch.\n\nKind regards${companyName ? `\n${companyName}` : ''}`,
   });
 }
 
@@ -75,17 +87,34 @@ export async function sendInvoiceEmail(
   invoiceNumber: string,
   clientName: string,
   companyName?: string,
+  totalGross?: number,
+  dueDate?: Date,
+  portalUrl?: string,
 ): Promise<void> {
   const company = companyName ? ` from ${companyName}` : '';
+  const amountLine = totalGross !== undefined
+    ? `<p><strong>Amount due: £${(totalGross / 100).toFixed(2)}</strong></p>`
+    : '';
+  const dueLine = dueDate
+    ? `<p>Due: ${new Date(dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>`
+    : '';
+  const ctaButton = portalUrl
+    ? `<p style="margin-top:16px"><a href="${portalUrl}" style="background:#2563eb;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">View &amp; Pay Invoice</a></p>`
+    : '';
+  const ctaText = portalUrl ? `\n\nView and pay your invoice here: ${portalUrl}` : '';
+
   await sendEmail({
     to,
     subject: `Invoice ${invoiceNumber}${company}`,
     html: `
       <p>Hi ${clientName},</p>
-      <p>Please find your invoice <strong>${invoiceNumber}</strong> below${company}.</p>
+      <p>Please find your invoice <strong>${invoiceNumber}</strong> attached${company}.</p>
+      ${amountLine}
+      ${dueLine}
+      ${ctaButton}
       <p>If you have any questions, please don't hesitate to get in touch.</p>
       <p>Kind regards${companyName ? `,<br>${companyName}` : ''}</p>
     `,
-    text: `Hi ${clientName},\n\nPlease find your invoice ${invoiceNumber} below${company}.\n\nIf you have any questions, please don't hesitate to get in touch.\n\nKind regards${companyName ? `\n${companyName}` : ''}`,
+    text: `Hi ${clientName},\n\nPlease find your invoice ${invoiceNumber} below${company}.${ctaText}\n\nIf you have any questions, please don't hesitate to get in touch.\n\nKind regards${companyName ? `\n${companyName}` : ''}`,
   });
 }

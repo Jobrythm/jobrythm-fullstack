@@ -1,5 +1,6 @@
 import { Navigate, createBrowserRouter } from 'react-router-dom';
 import { AppLayout } from '../layouts/AppLayout';
+import { PortalLayout } from '../layouts/PortalLayout';
 import { ProtectedRoute } from './ProtectedRoute';
 import { LoginPage } from '../pages/LoginPage';
 import { RegisterPage } from '../pages/RegisterPage';
@@ -18,10 +19,21 @@ import { InvoicesPage } from '../features/invoices/pages/InvoicesPage';
 import { InvoiceDetailPage } from '../features/invoices/pages/InvoiceDetailPage';
 import { SettingsPage } from '../features/settings/pages/SettingsPage';
 import { AdminPage } from '../features/admin/pages/AdminPage';
+import { PublicQuotePage } from '../features/portal/pages/PublicQuotePage';
+import { PublicInvoicePage } from '../features/portal/pages/PublicInvoicePage';
+import { SchedulePage } from '../features/schedule/pages/SchedulePage';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
   { path: '/register', element: <RegisterPage /> },
+  // Public client portal — no authentication required
+  {
+    element: <PortalLayout />,
+    children: [
+      { path: '/portal/quotes/:token', element: <PublicQuotePage /> },
+      { path: '/portal/invoices/:token', element: <PublicInvoicePage /> },
+    ],
+  },
   {
     element: <ProtectedRoute />,
     children: [
@@ -37,6 +49,7 @@ export const router = createBrowserRouter([
           { path: '/clients', element: <ClientsPage /> },
           { path: '/clients/new', element: <NewClientPage /> },
           { path: '/clients/:id', element: <ClientDetailPage /> },
+          { path: '/schedule', element: <SchedulePage /> },
           { path: '/quotes', element: <QuotesPage /> },
           { path: '/quotes/:id', element: <QuoteDetailPage /> },
           { path: '/invoices', element: <InvoicesPage /> },

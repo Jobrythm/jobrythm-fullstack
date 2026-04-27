@@ -1,6 +1,7 @@
 import logoOnly from '../assets/Jobrythm_Logo-Only.png';
 import {
   IconBriefcase,
+  IconCalendar,
   IconFileText,
   IconLayoutDashboard,
   IconMenu2,
@@ -42,6 +43,7 @@ const titleMap: Record<string, string> = {
   dashboard: 'Dashboard',
   jobs: 'Jobs',
   clients: 'Clients',
+  schedule: 'Schedule',
   quotes: 'Quotes',
   invoices: 'Invoices',
   settings: 'Settings',
@@ -85,6 +87,7 @@ export const AppLayout = () => {
         { to: '/dashboard', label: 'Dashboard', icon: IconLayoutDashboard },
         { to: '/jobs', label: 'Jobs', icon: IconBriefcase, badge: activeJobs.length },
         { to: '/clients', label: 'Clients', icon: IconUsers },
+        { to: '/schedule', label: 'Schedule', icon: IconCalendar },
         { to: '/quotes', label: 'Quotes', icon: IconFileText },
         { to: '/invoices', label: 'Invoices', icon: IconReceipt },
         { divider: true },

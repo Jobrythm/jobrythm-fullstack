@@ -6,9 +6,12 @@ import { User } from '../entities/User.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 import { InvoiceStatus } from '../types/enums.js';
 import { addDays } from 'date-fns';
+import { nanoid } from 'nanoid';
 import { getNextNumber } from '../utils/numberSequence.js';
+import { getAppUrl } from '../utils/appSettings.js';
 import { calculateTotals } from '../utils/calculations.js';
 import { sendInvoiceEmail } from '../utils/email.js';
+import { generateInvoicePdf } from '../utils/pdf.js';
 
 const router = Router();
 
@@ -124,6 +127,7 @@ router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
       vatRate,
       vatAmount: totals.vatAmount,
       totalGross: totals.totalGross,
+      publicToken: nanoid(32),
     });
 
     await invoiceRepository.save(invoice);
@@ -223,11 +227,16 @@ router.post('/:id/send', async (req: AuthRequest, res: Response): Promise<void> 
       try {
         const userRepository = AppDataSource.getRepository(User);
         const user = await userRepository.findOne({ where: { id: req.user!.userId } });
+        const appUrl = await getAppUrl();
+        const portalUrl = invoice.publicToken ? `${appUrl}/portal/invoices/${invoice.publicToken}` : undefined;
         await sendInvoiceEmail(
           clientEmail,
           invoice.invoiceNumber,
           invoice.job.client!.name,
           user?.companyName,
+          Number(invoice.totalGross),
+          invoice.dueDate,
+          portalUrl,
         );
       } catch (emailError) {
         console.error('Failed to send invoice email:', emailError);
@@ -242,7 +251,7 @@ router.post('/:id/send', async (req: AuthRequest, res: Response): Promise<void> 
   }
 });
 
-// Download invoice PDF (stub - would generate PDF)
+// Download invoice PDF
 router.get('/:id/pdf', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const invoiceRepository = AppDataSource.getRepository(Invoice);
@@ -260,8 +269,15 @@ router.get('/:id/pdf', async (req: AuthRequest, res: Response): Promise<void> =>
       return;
     }
 
-    // TODO: Generate PDF
-    res.status(501).json({ message: 'PDF generation not yet implemented' });
+    const userRepository = AppDataSource.getRepository(User);
+    const user = await userRepository.findOne({ where: { id: req.user!.userId } });
+
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    generateInvoicePdf(res, invoice as any, user);
   } catch (error) {
     console.error('Download invoice PDF error:', error);
     res.status(500).json({ error: 'Internal server error' });

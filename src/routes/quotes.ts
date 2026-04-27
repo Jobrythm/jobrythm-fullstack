@@ -6,9 +6,12 @@ import { User } from '../entities/User.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 import { QuoteStatus } from '../types/enums.js';
 import { addDays } from 'date-fns';
+import { nanoid } from 'nanoid';
 import { getNextNumber } from '../utils/numberSequence.js';
+import { getAppUrl } from '../utils/appSettings.js';
 import { calculateTotals } from '../utils/calculations.js';
 import { sendQuoteEmail } from '../utils/email.js';
+import { generateQuotePdf } from '../utils/pdf.js';
 
 const router = Router();
 
@@ -123,6 +126,7 @@ router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
       vatRate,
       vatAmount: totals.vatAmount,
       totalGross: totals.totalGross,
+      publicToken: nanoid(32),
     });
 
     await quoteRepository.save(quote);
@@ -194,11 +198,15 @@ router.post('/:id/send', async (req: AuthRequest, res: Response): Promise<void> 
       try {
         const userRepository = AppDataSource.getRepository(User);
         const user = await userRepository.findOne({ where: { id: req.user!.userId } });
+        const appUrl = await getAppUrl();
+        const portalUrl = quote.publicToken ? `${appUrl}/portal/quotes/${quote.publicToken}` : undefined;
         await sendQuoteEmail(
           clientEmail,
           quote.quoteNumber,
           quote.job.client!.name,
           user?.companyName,
+          Number(quote.totalGross),
+          portalUrl,
         );
       } catch (emailError) {
         console.error('Failed to send quote email:', emailError);
@@ -213,7 +221,7 @@ router.post('/:id/send', async (req: AuthRequest, res: Response): Promise<void> 
   }
 });
 
-// Download quote PDF (stub - would generate PDF)
+// Download quote PDF
 router.get('/:id/pdf', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const quoteRepository = AppDataSource.getRepository(Quote);
@@ -231,8 +239,15 @@ router.get('/:id/pdf', async (req: AuthRequest, res: Response): Promise<void> =>
       return;
     }
 
-    // TODO: Generate PDF
-    res.status(501).json({ message: 'PDF generation not yet implemented' });
+    const userRepository = AppDataSource.getRepository(User);
+    const user = await userRepository.findOne({ where: { id: req.user!.userId } });
+
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    generateQuotePdf(res, quote as any, user);
   } catch (error) {
     console.error('Download quote PDF error:', error);
     res.status(500).json({ error: 'Internal server error' });

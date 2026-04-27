@@ -74,3 +74,16 @@ export enum AdCreativeType {
   VIDEO = 'video',
   TEXT = 'text',
 }
+
+export enum AppointmentStatus {
+  SCHEDULED = 'scheduled',
+  IN_PROGRESS = 'in_progress',
+  COMPLETED = 'completed',
+  CANCELLED = 'cancelled',
+}
+
+export enum TeamMemberRole {
+  OWNER = 'owner',
+  MANAGER = 'manager',
+  TECHNICIAN = 'technician',
+}

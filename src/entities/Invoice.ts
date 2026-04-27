@@ -44,4 +44,10 @@ export class Invoice extends BaseEntity {
 
   @Column({ nullable: true })
   paidAt?: Date;
+
+  @Column({ unique: true, nullable: true })
+  publicToken?: string;
+
+  @Column({ nullable: true })
+  stripePaymentIntentId?: string;
 }

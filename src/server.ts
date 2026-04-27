@@ -22,6 +22,11 @@ import adminSettingsRoutes from './routes/adminSettings.js';
 import adminSalesRoutes from './routes/adminSales.js';
 import adminAdsRoutes from './routes/adminAds.js';
 import billingRoutes, { stripeWebhookHandler } from './routes/billing.js';
+import publicRoutes from './routes/public.js';
+import demoDataRoutes from './routes/demoData.js';
+import appointmentsRoutes from './routes/appointments.js';
+import teamRoutes from './routes/team.js';
+import aiRoutes from './routes/ai.js';
 import { User } from './entities/User.js';
 import { hashPassword } from './utils/auth.js';
 import { SubscriptionPlan } from './types/enums.js';
@@ -98,6 +103,11 @@ app.use('/api/admin/settings', apiLimiter, adminSettingsRoutes);
 app.use('/api/admin/sales', apiLimiter, adminSalesRoutes);
 app.use('/api/admin/ads', apiLimiter, adminAdsRoutes);
 app.use('/api/billing', apiLimiter, billingRoutes);
+app.use('/api/public', apiLimiter, publicRoutes);
+app.use('/api/demo-data', apiLimiter, demoDataRoutes);
+app.use('/api/appointments', apiLimiter, appointmentsRoutes);
+app.use('/api/team', apiLimiter, teamRoutes);
+app.use('/api', apiLimiter, aiRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

@@ -1,15 +1,13 @@
 import { Router, Response, Request } from 'express';
 import Stripe from 'stripe';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
-import { getStripeConfig } from '../utils/appSettings.js';
+import { getStripeConfig, getAppUrl } from '../utils/appSettings.js';
 import { AppDataSource } from '../config/database.js';
 import { User } from '../entities/User.js';
-import { SubscriptionPlan } from '../types/enums.js';
+import { Invoice } from '../entities/Invoice.js';
+import { SubscriptionPlan, InvoiceStatus } from '../types/enums.js';
 
 const router = Router();
-
-const resolveReturnBase = (): string =>
-  (process.env.APP_URL ?? 'http://localhost:8080').replace(/\/$/, '');
 
 type PlanTier = 'starter' | 'professional' | 'business';
 type BillingPeriod = 'monthly' | 'annual';
@@ -135,6 +133,22 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
         break;
       }
 
+      case 'payment_intent.succeeded': {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        const invoiceId = pi.metadata?.invoiceId;
+        if (!invoiceId) break;
+
+        const invoiceRepo = AppDataSource.getRepository(Invoice);
+        const invoice = await invoiceRepo.findOne({ where: { id: invoiceId } });
+        if (!invoice || invoice.status === InvoiceStatus.PAID) break;
+
+        invoice.status = InvoiceStatus.PAID;
+        invoice.paidAt = new Date();
+        await invoiceRepo.save(invoice);
+        console.log(`Invoice ${invoice.invoiceNumber} marked as paid via Stripe`);
+        break;
+      }
+
       default:
         break;
     }
@@ -169,7 +183,7 @@ router.post('/checkout', async (req: AuthRequest, res: Response): Promise<void> 
       return;
     }
 
-    const base = resolveReturnBase();
+    const base = await getAppUrl();
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
@@ -218,7 +232,7 @@ router.post('/portal', async (req: AuthRequest, res: Response): Promise<void> =>
       return;
     }
 
-    const base = resolveReturnBase();
+    const base = await getAppUrl();
     const portalParams: Stripe.BillingPortal.SessionCreateParams = {
       customer: customerId,
       return_url: `${base}/settings?tab=billing`,

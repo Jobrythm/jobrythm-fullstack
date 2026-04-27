@@ -44,4 +44,7 @@ export class Quote extends BaseEntity {
 
   @Column({ nullable: true })
   acceptedAt?: Date;
+
+  @Column({ unique: true, nullable: true })
+  publicToken?: string;
 }

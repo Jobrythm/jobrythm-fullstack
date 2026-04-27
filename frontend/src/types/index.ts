@@ -137,23 +137,29 @@ export interface AdminStats {
 export interface AppSettings {
   stripeApiKey: string;
   stripeApiKeySet: boolean;
+  stripePublishableKey: string;
   stripeWebhookSecret: string;
   stripeWebhookSecretSet: boolean;
+  stripePortalConfigurationId: string;
   stripeStarterMonthlyPriceId: string;
   stripeStarterAnnualPriceId: string;
   stripeProfessionalMonthlyPriceId: string;
   stripeProfessionalAnnualPriceId: string;
   stripeBusinessMonthlyPriceId: string;
   stripeBusinessAnnualPriceId: string;
+  appUrl: string;
   smtpHost: string;
   smtpPort: string;
-  smtpSecure: boolean;
   smtpUser: string;
   smtpPassword: string;
   smtpPasswordSet: boolean;
   smtpFromEmail: string;
   smtpFromName: string;
   emailConfigured: boolean;
+  githubModelsToken: string;
+  githubModelsTokenSet: boolean;
+  githubModelsModel: string;
+  aiConfigured: boolean;
 }
 
 export interface BillingStatus {
