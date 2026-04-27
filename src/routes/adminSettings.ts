@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
 import { authenticateToken, requireAdmin, AuthRequest } from '../middleware/auth.js';
-import { getStripeConfig, getEmailConfig, getSetting, setSetting, getGitHubModelsConfig } from '../utils/appSettings.js';
+import { getStripeConfig, getEmailConfig, getSetting, setSetting, getGitHubModelsConfig, getIntegrationsConfig } from '../utils/appSettings.js';
 import { sendEmail } from '../utils/email.js';
 
 const router = Router();
@@ -18,11 +18,12 @@ function maskKey(value: string | null): string {
 // GET /api/admin/settings
 router.get('/', async (_req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const [config, emailConfig, appUrl, aiConfig] = await Promise.all([
+    const [config, emailConfig, appUrl, aiConfig, intConfig] = await Promise.all([
       getStripeConfig(),
       getEmailConfig(),
       getSetting('app_url'),
       getGitHubModelsConfig(),
+      getIntegrationsConfig(),
     ]);
     res.json({
       stripeApiKey: maskKey(config.apiKey),
@@ -50,6 +51,15 @@ router.get('/', async (_req: AuthRequest, res: Response): Promise<void> => {
       githubModelsTokenSet: Boolean(aiConfig.token),
       githubModelsModel: aiConfig.model ?? 'gpt-4o',
       aiConfigured: Boolean(aiConfig.token),
+      quickbooksClientId: intConfig.quickbooksClientId ?? '',
+      quickbooksClientSecret: maskKey(intConfig.quickbooksClientSecret),
+      quickbooksClientSecretSet: Boolean(intConfig.quickbooksClientSecret),
+      quickbooksRedirectUri: intConfig.quickbooksRedirectUri ?? '',
+      quickbooksSandbox: intConfig.quickbooksSandbox,
+      xeroClientId: intConfig.xeroClientId ?? '',
+      xeroClientSecret: maskKey(intConfig.xeroClientSecret),
+      xeroClientSecretSet: Boolean(intConfig.xeroClientSecret),
+      xeroRedirectUri: intConfig.xeroRedirectUri ?? '',
     });
   } catch (error) {
     console.error('Get settings error:', error);
@@ -80,6 +90,13 @@ router.put('/', async (req: AuthRequest, res: Response): Promise<void> => {
       smtpFromName,
       githubModelsToken,
       githubModelsModel,
+      quickbooksClientId,
+      quickbooksClientSecret,
+      quickbooksRedirectUri,
+      quickbooksSandbox,
+      xeroClientId,
+      xeroClientSecret,
+      xeroRedirectUri,
     }: Partial<Record<string, string>> = req.body;
 
     const secretUpdates: Array<[string, string]> = [];
@@ -111,17 +128,27 @@ router.put('/', async (req: AuthRequest, res: Response): Promise<void> => {
     if (smtpFromEmail !== undefined) emailUpdates.push(['smtp_from_email', smtpFromEmail.trim() || null]);
     if (smtpFromName !== undefined) emailUpdates.push(['smtp_from_name', smtpFromName.trim() || null]);
 
+    // QuickBooks / Xero integration
+    if (quickbooksClientId !== undefined) generalUpdates.push(['quickbooks_client_id', quickbooksClientId.trim() || null]);
+    if (quickbooksClientSecret?.trim()) secretUpdates.push(['quickbooks_client_secret', quickbooksClientSecret.trim()]);
+    if (quickbooksRedirectUri !== undefined) generalUpdates.push(['quickbooks_redirect_uri', quickbooksRedirectUri.trim() || null]);
+    if (quickbooksSandbox !== undefined) generalUpdates.push(['quickbooks_sandbox', quickbooksSandbox.trim() || 'true']);
+    if (xeroClientId !== undefined) generalUpdates.push(['xero_client_id', xeroClientId.trim() || null]);
+    if (xeroClientSecret?.trim()) secretUpdates.push(['xero_client_secret', xeroClientSecret.trim()]);
+    if (xeroRedirectUri !== undefined) generalUpdates.push(['xero_redirect_uri', xeroRedirectUri.trim() || null]);
+
     await Promise.all([
       ...secretUpdates.map(([key, value]) => setSetting(key, value)),
       ...generalUpdates.map(([key, value]) => setSetting(key, value)),
       ...emailUpdates.map(([key, value]) => setSetting(key, value)),
     ]);
 
-    const [config, emailConfig, savedAppUrl, aiConfig] = await Promise.all([
+    const [config, emailConfig, savedAppUrl, aiConfig, intConfig] = await Promise.all([
       getStripeConfig(),
       getEmailConfig(),
       getSetting('app_url'),
       getGitHubModelsConfig(),
+      getIntegrationsConfig(),
     ]);
     res.json({
       stripeApiKey: maskKey(config.apiKey),
@@ -149,6 +176,15 @@ router.put('/', async (req: AuthRequest, res: Response): Promise<void> => {
       githubModelsTokenSet: Boolean(aiConfig.token),
       githubModelsModel: aiConfig.model ?? 'gpt-4o',
       aiConfigured: Boolean(aiConfig.token),
+      quickbooksClientId: intConfig.quickbooksClientId ?? '',
+      quickbooksClientSecret: maskKey(intConfig.quickbooksClientSecret),
+      quickbooksClientSecretSet: Boolean(intConfig.quickbooksClientSecret),
+      quickbooksRedirectUri: intConfig.quickbooksRedirectUri ?? '',
+      quickbooksSandbox: intConfig.quickbooksSandbox,
+      xeroClientId: intConfig.xeroClientId ?? '',
+      xeroClientSecret: maskKey(intConfig.xeroClientSecret),
+      xeroClientSecretSet: Boolean(intConfig.xeroClientSecret),
+      xeroRedirectUri: intConfig.xeroRedirectUri ?? '',
     });
   } catch (error) {
     console.error('Update settings error:', error);

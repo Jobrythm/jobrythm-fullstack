@@ -162,6 +162,15 @@ export interface AppSettings {
   githubModelsTokenSet: boolean;
   githubModelsModel: string;
   aiConfigured: boolean;
+  quickbooksClientId: string;
+  quickbooksClientSecret: string;
+  quickbooksClientSecretSet: boolean;
+  quickbooksRedirectUri: string;
+  quickbooksSandbox: boolean;
+  xeroClientId: string;
+  xeroClientSecret: string;
+  xeroClientSecretSet: boolean;
+  xeroRedirectUri: string;
 }
 
 export interface BillingStatus {

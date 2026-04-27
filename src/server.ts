@@ -36,6 +36,7 @@ import companyMembersRoutes from './routes/companyMembers.js';
 import messagesRoutes from './routes/messages.js';
 import recurringJobsRoutes from './routes/recurringJobs.js';
 import { startRecurringJobCron } from './utils/recurringJobs.js';
+import { integrationsRouter } from './routes/integrations.js';
 import { User } from './entities/User.js';
 import { hashPassword } from './utils/auth.js';
 import { SubscriptionPlan } from './types/enums.js';
@@ -125,6 +126,7 @@ app.use('/api/reports', apiLimiter, reportsRoutes);
 app.use('/api/company', apiLimiter, companyMembersRoutes);
 app.use('/api/jobs', apiLimiter, messagesRoutes);
 app.use('/api/recurring-jobs', apiLimiter, recurringJobsRoutes);
+app.use('/api/integrations', apiLimiter, integrationsRouter);
 
 // Health check
 app.get('/api/health', (_req, res) => {

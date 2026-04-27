@@ -1148,13 +1148,171 @@ const AiSettingsPanel = () => {
   );
 };
 
+// ── Integrations Settings panel ────────────────────────────────────────────────
+const integrationsSettingsSchema = z.object({
+  quickbooksClientId: z.string().optional(),
+  quickbooksClientSecret: z.string().optional(),
+  quickbooksRedirectUri: z.string().optional(),
+  quickbooksSandbox: z.string().optional(),
+  xeroClientId: z.string().optional(),
+  xeroClientSecret: z.string().optional(),
+  xeroRedirectUri: z.string().optional(),
+});
+type IntegrationsSettingsValues = z.infer<typeof integrationsSettingsSchema>;
+
+const IntegrationsSettingsPanel = () => {
+  const { data: settings, isLoading } = useAdminSettings();
+  const updateSettings = useUpdateAdminSettings();
+  const form = useForm<IntegrationsSettingsValues>({
+    resolver: zodResolver(integrationsSettingsSchema),
+    defaultValues: {
+      quickbooksClientId: '',
+      quickbooksClientSecret: '',
+      quickbooksRedirectUri: '',
+      quickbooksSandbox: 'true',
+      xeroClientId: '',
+      xeroClientSecret: '',
+      xeroRedirectUri: '',
+    },
+  });
+
+  useEffect(() => {
+    if (settings) {
+      form.reset({
+        quickbooksClientId: settings.quickbooksClientId ?? '',
+        quickbooksClientSecret: '',
+        quickbooksRedirectUri: settings.quickbooksRedirectUri ?? '',
+        quickbooksSandbox: settings.quickbooksSandbox ? 'true' : 'false',
+        xeroClientId: settings.xeroClientId ?? '',
+        xeroClientSecret: '',
+        xeroRedirectUri: settings.xeroRedirectUri ?? '',
+      });
+    }
+  }, [settings, form]);
+
+  const onSubmit = (values: IntegrationsSettingsValues) => {
+    const payload: Partial<IntegrationsSettingsValues> = { ...values };
+    if (!payload.quickbooksClientSecret?.trim()) delete payload.quickbooksClientSecret;
+    if (!payload.xeroClientSecret?.trim()) delete payload.xeroClientSecret;
+    updateSettings.mutate(payload as Record<string, string>, {
+      onSuccess: () => toast.success('Integrations settings saved'),
+      onError: (err: Error) => toast.error(err.message),
+    });
+    form.setValue('quickbooksClientSecret', '');
+    form.setValue('xeroClientSecret', '');
+  };
+
+  if (isLoading) return <LoadingSpinner />;
+
+  return (
+    <div className="row row-cards">
+      {/* QuickBooks */}
+      <div className="col-12">
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title">QuickBooks Online Integration</h3>
+          </div>
+          <div className="card-body">
+            <div className="alert alert-info mb-3">
+              <h4 className="alert-heading h6 mb-2">How to set up QuickBooks integration</h4>
+              <ol className="mb-0 ps-3">
+                <li>Go to <a href="https://developer.intuit.com/app/developer/myapps" target="_blank" rel="noreferrer" className="alert-link">developer.intuit.com</a> and create an app.</li>
+                <li>Select <strong>Accounting</strong> scope.</li>
+                <li>Copy the <strong>Client ID</strong> and <strong>Client Secret</strong> from "Keys &amp; credentials".</li>
+                <li>Add your Redirect URI (e.g. <code>https://yourdomain.com/api/integrations/quickbooks/callback</code>) to the app's allowed redirect URIs.</li>
+                <li>Use <strong>Sandbox</strong> mode for testing, then switch to <strong>Production</strong> once ready.</li>
+              </ol>
+            </div>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <div className="row g-3">
+                <div className="col-md-6">
+                  <label className="form-label">Client ID</label>
+                  <input className="form-control" placeholder="AB..." {...form.register('quickbooksClientId')} />
+                  <div className="form-hint">From Intuit Developer → Your App → Keys &amp; Credentials</div>
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label">Client Secret</label>
+                  <input className="form-control" type="password" placeholder={settings?.quickbooksClientSecretSet ? 'Enter new secret to replace' : 'Paste secret…'} {...form.register('quickbooksClientSecret')} />
+                  <div className="form-hint">From Intuit Developer → Your App → Keys &amp; Credentials</div>
+                </div>
+                <div className="col-md-8">
+                  <label className="form-label">Redirect URI</label>
+                  <input className="form-control" placeholder="https://yourdomain.com/api/integrations/quickbooks/callback" {...form.register('quickbooksRedirectUri')} />
+                  <div className="form-hint">Must match exactly what you entered in the Intuit Developer portal</div>
+                </div>
+                <div className="col-md-4">
+                  <label className="form-label">Mode</label>
+                  <select className="form-select" {...form.register('quickbooksSandbox')}>
+                    <option value="true">Sandbox (testing)</option>
+                    <option value="false">Production (live)</option>
+                  </select>
+                </div>
+                <div className="col-12">
+                  <button className="btn btn-primary" type="submit" disabled={updateSettings.isPending}>
+                    {updateSettings.isPending ? 'Saving…' : 'Save QuickBooks settings'}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      {/* Xero */}
+      <div className="col-12">
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title">Xero Integration</h3>
+          </div>
+          <div className="card-body">
+            <div className="alert alert-info mb-3">
+              <h4 className="alert-heading h6 mb-2">How to set up Xero integration</h4>
+              <ol className="mb-0 ps-3">
+                <li>Go to <a href="https://developer.xero.com/app/manage" target="_blank" rel="noreferrer" className="alert-link">developer.xero.com</a> and create a new app.</li>
+                <li>Set the integration type to <strong>Web App</strong>.</li>
+                <li>Add your Redirect URI (e.g. <code>https://yourdomain.com/api/integrations/xero/callback</code>).</li>
+                <li>Copy the <strong>Client ID</strong> and <strong>Client Secret</strong> from the app configuration.</li>
+                <li>Ensure the scopes include <code>accounting.transactions</code> and <code>accounting.contacts</code>.</li>
+              </ol>
+            </div>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <div className="row g-3">
+                <div className="col-md-6">
+                  <label className="form-label">Client ID</label>
+                  <input className="form-control" placeholder="XXXXXXXX-..." {...form.register('xeroClientId')} />
+                  <div className="form-hint">From Xero Developer → Your App → App Credentials</div>
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label">Client Secret</label>
+                  <input className="form-control" type="password" placeholder={settings?.xeroClientSecretSet ? 'Enter new secret to replace' : 'Paste secret…'} {...form.register('xeroClientSecret')} />
+                  <div className="form-hint">From Xero Developer → Your App → App Credentials</div>
+                </div>
+                <div className="col-md-8">
+                  <label className="form-label">Redirect URI</label>
+                  <input className="form-control" placeholder="https://yourdomain.com/api/integrations/xero/callback" {...form.register('xeroRedirectUri')} />
+                  <div className="form-hint">Must match exactly what you entered in the Xero Developer portal</div>
+                </div>
+                <div className="col-12">
+                  <button className="btn btn-primary" type="submit" disabled={updateSettings.isPending}>
+                    {updateSettings.isPending ? 'Saving…' : 'Save Xero settings'}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ── Main page ──────────────────────────────────────────────────────────────────
 export const AdminPage = () => {
   const { user: currentUser } = useAuth();
   const { data: users = [], isLoading, isError, error } = useAdminUsers();
   const deleteUser = useAdminDeleteUser();
 
-  const [tab, setTab] = useState<'dashboard' | 'users' | 'settings' | 'email' | 'ai' | 'sales'>('dashboard');
+  const [tab, setTab] = useState<'dashboard' | 'users' | 'settings' | 'email' | 'ai' | 'integrations' | 'sales'>('dashboard');
   const [showCreate, setShowCreate] = useState(false);
   const [editTarget, setEditTarget] = useState<AdminUser | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
@@ -1251,6 +1409,15 @@ export const AdminPage = () => {
                 Sales
               </button>
             </li>
+            <li className="nav-item">
+              <button
+                className={`nav-link ${tab === 'integrations' ? 'active' : ''}`}
+                onClick={() => setTab('integrations')}
+              >
+                <IconExternalLink size={15} className="me-1" />
+                Integrations
+              </button>
+            </li>
           </ul>
         </div>
       </div>
@@ -1262,6 +1429,8 @@ export const AdminPage = () => {
       {tab === 'email' && <EmailSettingsPanel />}
 
       {tab === 'ai' && <AiSettingsPanel />}
+
+      {tab === 'integrations' && <IntegrationsSettingsPanel />}
 
       {tab === 'sales' && <SalesPanel />}
 

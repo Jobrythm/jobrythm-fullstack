@@ -4,10 +4,21 @@ import { useForm } from 'react-hook-form';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { z } from 'zod';
-import { IconAlertCircle, IconCheck, IconCrown, IconToggleLeft, IconToggleRight } from '@tabler/icons-react';
+import { IconAlertCircle, IconCheck, IconCrown, IconToggleLeft, IconToggleRight, IconLink, IconUnlink, IconRefresh } from '@tabler/icons-react';
 import { useAuthStore } from '../../../store/authStore';
 import { updateCurrentUser, uploadCurrentUserLogo } from '../../../api/users';
 import { createBillingPortalSession, createCheckoutSession, getBillingStatus } from '../../../api/dashboard';
+import {
+  getIntegrationsStatus,
+  getQBConnectUrl,
+  disconnectQB,
+  syncQBClients,
+  syncQBInvoices,
+  getXeroConnectUrl,
+  disconnectXero,
+  syncXeroClients,
+  syncXeroInvoices,
+} from '../../../api/integrations';
 
 const profileSchema = z.object({
   name: z.string().min(1, 'Required'),
@@ -73,7 +84,7 @@ const PLANS = [
 ] as const;
 
 export const SettingsPage = () => {
-  const [tab, setTab] = useState<'profile' | 'company' | 'billing'>('profile');
+  const [tab, setTab] = useState<'profile' | 'company' | 'billing' | 'integrations'>('profile');
   const [billingAnnual, setBillingAnnual] = useState(true);
   const user = useAuthStore((state) => state.user);
   const setAuth = useAuthStore((state) => state.setAuth);
@@ -145,6 +156,62 @@ export const SettingsPage = () => {
     enabled: tab === 'billing',
   });
 
+  const { data: integrationsStatus, refetch: refetchIntegrations } = useQuery({
+    queryKey: ['integrations', 'status'],
+    queryFn: getIntegrationsStatus,
+    enabled: tab === 'integrations',
+  });
+
+  const [syncingQBClients, setSyncingQBClients] = useState(false);
+  const [syncingQBInvoices, setSyncingQBInvoices] = useState(false);
+  const [syncingXeroClients, setSyncingXeroClients] = useState(false);
+  const [syncingXeroInvoices, setSyncingXeroInvoices] = useState(false);
+
+  const handleQBConnect = async () => {
+    try {
+      const { url } = await getQBConnectUrl();
+      window.location.href = url;
+    } catch (e) { toast.error((e as Error).message); }
+  };
+  const handleQBDisconnect = async () => {
+    try { await disconnectQB(); await refetchIntegrations(); toast.success('QuickBooks disconnected'); }
+    catch (e) { toast.error((e as Error).message); }
+  };
+  const handleQBSyncClients = async () => {
+    setSyncingQBClients(true);
+    try { const r = await syncQBClients(); toast.success(r.message); await refetchIntegrations(); }
+    catch (e) { toast.error((e as Error).message); }
+    finally { setSyncingQBClients(false); }
+  };
+  const handleQBSyncInvoices = async () => {
+    setSyncingQBInvoices(true);
+    try { const r = await syncQBInvoices(); toast.success(r.message); await refetchIntegrations(); }
+    catch (e) { toast.error((e as Error).message); }
+    finally { setSyncingQBInvoices(false); }
+  };
+  const handleXeroConnect = async () => {
+    try {
+      const { url } = await getXeroConnectUrl();
+      window.location.href = url;
+    } catch (e) { toast.error((e as Error).message); }
+  };
+  const handleXeroDisconnect = async () => {
+    try { await disconnectXero(); await refetchIntegrations(); toast.success('Xero disconnected'); }
+    catch (e) { toast.error((e as Error).message); }
+  };
+  const handleXeroSyncClients = async () => {
+    setSyncingXeroClients(true);
+    try { const r = await syncXeroClients(); toast.success(r.message); await refetchIntegrations(); }
+    catch (e) { toast.error((e as Error).message); }
+    finally { setSyncingXeroClients(false); }
+  };
+  const handleXeroSyncInvoices = async () => {
+    setSyncingXeroInvoices(true);
+    try { const r = await syncXeroInvoices(); toast.success(r.message); await refetchIntegrations(); }
+    catch (e) { toast.error((e as Error).message); }
+    finally { setSyncingXeroInvoices(false); }
+  };
+
   const handleLogoUpload = (file: File | null) => {
     if (!file) return;
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
@@ -187,6 +254,9 @@ export const SettingsPage = () => {
           </li>
           <li className="nav-item">
             <button className={`nav-link ${tab === 'billing' ? 'active' : ''}`} onClick={() => setTab('billing')}>Billing</button>
+          </li>
+          <li className="nav-item">
+            <button className={`nav-link ${tab === 'integrations' ? 'active' : ''}`} onClick={() => setTab('integrations')}>Integrations</button>
           </li>
         </ul>
       </div>
@@ -441,6 +511,89 @@ export const SettingsPage = () => {
                 </div>
               </>
             )}
+          </div>
+        )}
+
+        {/* ── Integrations tab ── */}
+        {tab === 'integrations' && (
+          <div>
+            <p className="text-secondary mb-4">Connect your accounting software to sync clients and invoices. Your admin must configure credentials first.</p>
+
+            {/* QuickBooks */}
+            <div className="card mb-4">
+              <div className="card-header d-flex align-items-center gap-2">
+                <strong>QuickBooks Online</strong>
+                {integrationsStatus?.quickbooks?.connected
+                  ? <span className="badge bg-success-lt">Connected</span>
+                  : <span className="badge bg-secondary-lt">Not connected</span>}
+              </div>
+              <div className="card-body">
+                {integrationsStatus?.quickbooks?.connected ? (
+                  <>
+                    {integrationsStatus.quickbooks.lastSyncAt && (
+                      <p className="text-secondary small mb-3">Last synced: {new Date(integrationsStatus.quickbooks.lastSyncAt).toLocaleString()}</p>
+                    )}
+                    <div className="d-flex flex-wrap gap-2">
+                      <button className="btn btn-outline-primary btn-sm" onClick={handleQBSyncClients} disabled={syncingQBClients}>
+                        <IconRefresh size={14} className="me-1" />
+                        {syncingQBClients ? 'Syncing…' : 'Sync Clients → QB'}
+                      </button>
+                      <button className="btn btn-outline-primary btn-sm" onClick={handleQBSyncInvoices} disabled={syncingQBInvoices}>
+                        <IconRefresh size={14} className="me-1" />
+                        {syncingQBInvoices ? 'Syncing…' : 'Sync Invoices → QB'}
+                      </button>
+                      <button className="btn btn-outline-danger btn-sm ms-auto" onClick={handleQBDisconnect}>
+                        <IconUnlink size={14} className="me-1" />
+                        Disconnect
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <button className="btn btn-outline-success" onClick={handleQBConnect}>
+                    <IconLink size={14} className="me-1" />
+                    Connect QuickBooks
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Xero */}
+            <div className="card">
+              <div className="card-header d-flex align-items-center gap-2">
+                <strong>Xero</strong>
+                {integrationsStatus?.xero?.connected
+                  ? <span className="badge bg-success-lt">Connected</span>
+                  : <span className="badge bg-secondary-lt">Not connected</span>}
+              </div>
+              <div className="card-body">
+                {integrationsStatus?.xero?.connected ? (
+                  <>
+                    {integrationsStatus.xero.lastSyncAt && (
+                      <p className="text-secondary small mb-3">Last synced: {new Date(integrationsStatus.xero.lastSyncAt).toLocaleString()}</p>
+                    )}
+                    <div className="d-flex flex-wrap gap-2">
+                      <button className="btn btn-outline-primary btn-sm" onClick={handleXeroSyncClients} disabled={syncingXeroClients}>
+                        <IconRefresh size={14} className="me-1" />
+                        {syncingXeroClients ? 'Syncing…' : 'Sync Clients → Xero'}
+                      </button>
+                      <button className="btn btn-outline-primary btn-sm" onClick={handleXeroSyncInvoices} disabled={syncingXeroInvoices}>
+                        <IconRefresh size={14} className="me-1" />
+                        {syncingXeroInvoices ? 'Syncing…' : 'Sync Invoices → Xero'}
+                      </button>
+                      <button className="btn btn-outline-danger btn-sm ms-auto" onClick={handleXeroDisconnect}>
+                        <IconUnlink size={14} className="me-1" />
+                        Disconnect
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <button className="btn btn-outline-success" onClick={handleXeroConnect}>
+                    <IconLink size={14} className="me-1" />
+                    Connect Xero
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>

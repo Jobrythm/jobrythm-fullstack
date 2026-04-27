@@ -158,3 +158,36 @@ export async function getAdPlatformConfig(): Promise<AdPlatformConfig> {
     metaAppSecret: metaAppSecret ?? process.env.META_APP_SECRET ?? null,
   };
 }
+
+export interface IntegrationsConfig {
+  quickbooksClientId: string | null;
+  quickbooksClientSecret: string | null;
+  quickbooksRedirectUri: string | null;
+  quickbooksSandbox: boolean;
+  xeroClientId: string | null;
+  xeroClientSecret: string | null;
+  xeroRedirectUri: string | null;
+}
+
+export async function getIntegrationsConfig(): Promise<IntegrationsConfig> {
+  const [qbClientId, qbClientSecret, qbRedirectUri, qbSandbox, xeroClientId, xeroClientSecret, xeroRedirectUri] =
+    await Promise.all([
+      getSetting('quickbooks_client_id'),
+      getSetting('quickbooks_client_secret'),
+      getSetting('quickbooks_redirect_uri'),
+      getSetting('quickbooks_sandbox'),
+      getSetting('xero_client_id'),
+      getSetting('xero_client_secret'),
+      getSetting('xero_redirect_uri'),
+    ]);
+
+  return {
+    quickbooksClientId:     qbClientId     ?? process.env.QUICKBOOKS_CLIENT_ID     ?? null,
+    quickbooksClientSecret: qbClientSecret ?? process.env.QUICKBOOKS_CLIENT_SECRET ?? null,
+    quickbooksRedirectUri:  qbRedirectUri  ?? process.env.QUICKBOOKS_REDIRECT_URI  ?? null,
+    quickbooksSandbox:      (qbSandbox ?? process.env.QUICKBOOKS_SANDBOX ?? 'true') === 'true',
+    xeroClientId:           xeroClientId           ?? process.env.XERO_CLIENT_ID           ?? null,
+    xeroClientSecret:       xeroClientSecret       ?? process.env.XERO_CLIENT_SECRET       ?? null,
+    xeroRedirectUri:        xeroRedirectUri        ?? process.env.XERO_REDIRECT_URI        ?? null,
+  };
+}
