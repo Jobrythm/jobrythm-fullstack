@@ -52,7 +52,7 @@ router.post('/jobs/:id/ai-suggest-line-items', async (req: AuthRequest, res: Res
       .slice(0, 10)
       .map((j) => {
         const items = j.lineItems
-          .map((li) => `  - ${li.description} (qty: ${li.quantity}, unit: £${(Number(li.unitPriceCents) / 100).toFixed(2)}, category: ${li.category})`)
+          .map((li) => `  - ${li.description} (qty: ${li.quantity}, unit: £${(Number(li.unitPrice) / 100).toFixed(2)}, category: ${li.category})`)
           .join('\n');
         return `Job: "${j.title}"\nLine items:\n${items}`;
       })

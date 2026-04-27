@@ -18,6 +18,8 @@ import {
   IconEdit,
   IconAlertCircle,
   IconTargetArrow,
+  IconSparkles,
+  IconExternalLink,
 } from '@tabler/icons-react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -40,6 +42,7 @@ import {
   useUpdateAdminSettings,
 } from '../hooks/useAdminUsers';
 import { SalesPanel } from './SalesPanel';
+import { resolveApiBaseUrl } from '../../../api/hosts';
 
 const PLANS: AdminUserPlan[] = ['starter', 'professional', 'business', 'admin'];
 
@@ -66,19 +69,21 @@ const editSchema = z.object({
 
 const stripeSettingsSchema = z.object({
   stripeApiKey: z.string().optional(),
+  stripePublishableKey: z.string().optional(),
   stripeWebhookSecret: z.string().optional(),
+  stripePortalConfigurationId: z.string().optional(),
   stripeStarterMonthlyPriceId: z.string().optional(),
   stripeStarterAnnualPriceId: z.string().optional(),
   stripeProfessionalMonthlyPriceId: z.string().optional(),
   stripeProfessionalAnnualPriceId: z.string().optional(),
   stripeBusinessMonthlyPriceId: z.string().optional(),
   stripeBusinessAnnualPriceId: z.string().optional(),
+  appUrl: z.string().optional(),
 });
 
 const emailSettingsSchema = z.object({
   smtpHost: z.string().optional(),
   smtpPort: z.string().optional(),
-  smtpSecure: z.boolean().optional(),
   smtpUser: z.string().optional(),
   smtpPassword: z.string().optional(),
   smtpFromEmail: z.string().optional(),
@@ -86,10 +91,16 @@ const emailSettingsSchema = z.object({
   testEmailTo: z.string().optional(),
 });
 
+const aiSettingsSchema = z.object({
+  githubModelsToken: z.string().optional(),
+  githubModelsModel: z.string().optional(),
+});
+
 type CreateValues = z.infer<typeof createSchema>;
 type EditValues = z.infer<typeof editSchema>;
 type StripeSettingsValues = z.infer<typeof stripeSettingsSchema>;
 type EmailSettingsValues = z.infer<typeof emailSettingsSchema>;
+type AiSettingsValues = z.infer<typeof aiSettingsSchema>;
 
 // ── Create user modal ──────────────────────────────────────────────────────────
 const CreateUserModal = ({ onClose }: { onClose: () => void }) => {
@@ -384,17 +395,24 @@ const StripeSettingsPanel = () => {
   const [showKey, setShowKey] = useState(false);
   const [showWebhookSecret, setShowWebhookSecret] = useState(false);
 
+  // Derive the webhook URL from the API base, not window.location (they may differ)
+  const apiBase = resolveApiBaseUrl().replace(/\/api$/, '');
+  const webhookUrl = `${apiBase}/api/billing/webhook`;
+
   const form = useForm<StripeSettingsValues>({
     resolver: zodResolver(stripeSettingsSchema),
     defaultValues: {
       stripeApiKey: '',
+      stripePublishableKey: '',
       stripeWebhookSecret: '',
+      stripePortalConfigurationId: '',
       stripeStarterMonthlyPriceId: '',
       stripeStarterAnnualPriceId: '',
       stripeProfessionalMonthlyPriceId: '',
       stripeProfessionalAnnualPriceId: '',
       stripeBusinessMonthlyPriceId: '',
       stripeBusinessAnnualPriceId: '',
+      appUrl: '',
     },
   });
 
@@ -402,13 +420,16 @@ const StripeSettingsPanel = () => {
     if (settings) {
       form.reset({
         stripeApiKey: '',
+        stripePublishableKey: settings.stripePublishableKey ?? '',
         stripeWebhookSecret: '',
+        stripePortalConfigurationId: settings.stripePortalConfigurationId ?? '',
         stripeStarterMonthlyPriceId: settings.stripeStarterMonthlyPriceId ?? '',
         stripeStarterAnnualPriceId: settings.stripeStarterAnnualPriceId ?? '',
         stripeProfessionalMonthlyPriceId: settings.stripeProfessionalMonthlyPriceId ?? '',
         stripeProfessionalAnnualPriceId: settings.stripeProfessionalAnnualPriceId ?? '',
         stripeBusinessMonthlyPriceId: settings.stripeBusinessMonthlyPriceId ?? '',
         stripeBusinessAnnualPriceId: settings.stripeBusinessAnnualPriceId ?? '',
+        appUrl: settings.appUrl ?? '',
       });
     }
   }, [settings, form]);
@@ -417,12 +438,15 @@ const StripeSettingsPanel = () => {
     const payload: Record<string, string> = {};
     if (values.stripeApiKey?.trim()) payload.stripeApiKey = values.stripeApiKey.trim();
     if (values.stripeWebhookSecret?.trim()) payload.stripeWebhookSecret = values.stripeWebhookSecret.trim();
+    if (values.stripePublishableKey !== undefined) payload.stripePublishableKey = values.stripePublishableKey?.trim() ?? '';
+    if (values.stripePortalConfigurationId !== undefined) payload.stripePortalConfigurationId = values.stripePortalConfigurationId?.trim() ?? '';
     if (values.stripeStarterMonthlyPriceId !== undefined) payload.stripeStarterMonthlyPriceId = values.stripeStarterMonthlyPriceId?.trim() ?? '';
     if (values.stripeStarterAnnualPriceId !== undefined) payload.stripeStarterAnnualPriceId = values.stripeStarterAnnualPriceId?.trim() ?? '';
     if (values.stripeProfessionalMonthlyPriceId !== undefined) payload.stripeProfessionalMonthlyPriceId = values.stripeProfessionalMonthlyPriceId?.trim() ?? '';
     if (values.stripeProfessionalAnnualPriceId !== undefined) payload.stripeProfessionalAnnualPriceId = values.stripeProfessionalAnnualPriceId?.trim() ?? '';
     if (values.stripeBusinessMonthlyPriceId !== undefined) payload.stripeBusinessMonthlyPriceId = values.stripeBusinessMonthlyPriceId?.trim() ?? '';
     if (values.stripeBusinessAnnualPriceId !== undefined) payload.stripeBusinessAnnualPriceId = values.stripeBusinessAnnualPriceId?.trim() ?? '';
+    if (values.appUrl !== undefined) payload.appUrl = values.appUrl?.trim() ?? '';
 
     updateSettings.mutate(payload, {
       onSuccess: () => {
@@ -436,14 +460,13 @@ const StripeSettingsPanel = () => {
   if (isLoading) return <div className="text-secondary py-3">Loading settings…</div>;
 
   const statusItems = [
-    { label: 'API Key', set: settings?.stripeApiKeySet, value: settings?.stripeApiKey },
+    { label: 'Secret Key', set: settings?.stripeApiKeySet, value: settings?.stripeApiKey },
+    { label: 'Publishable Key', set: Boolean(settings?.stripePublishableKey), value: settings?.stripePublishableKey },
     { label: 'Webhook Secret', set: settings?.stripeWebhookSecretSet, value: settings?.stripeWebhookSecret },
     { label: 'Starter Monthly', set: Boolean(settings?.stripeStarterMonthlyPriceId), value: settings?.stripeStarterMonthlyPriceId },
-    { label: 'Starter Annual', set: Boolean(settings?.stripeStarterAnnualPriceId), value: settings?.stripeStarterAnnualPriceId },
-    { label: 'Professional Monthly', set: Boolean(settings?.stripeProfessionalMonthlyPriceId), value: settings?.stripeProfessionalMonthlyPriceId },
-    { label: 'Professional Annual', set: Boolean(settings?.stripeProfessionalAnnualPriceId), value: settings?.stripeProfessionalAnnualPriceId },
+    { label: 'Pro Monthly', set: Boolean(settings?.stripeProfessionalMonthlyPriceId), value: settings?.stripeProfessionalMonthlyPriceId },
     { label: 'Business Monthly', set: Boolean(settings?.stripeBusinessMonthlyPriceId), value: settings?.stripeBusinessMonthlyPriceId },
-    { label: 'Business Annual', set: Boolean(settings?.stripeBusinessAnnualPriceId), value: settings?.stripeBusinessAnnualPriceId },
+    { label: 'App URL', set: Boolean(settings?.appUrl), value: settings?.appUrl },
   ];
 
   return (
@@ -453,18 +476,18 @@ const StripeSettingsPanel = () => {
         <div className="alert alert-info" role="alert">
           <div className="d-flex gap-2 align-items-start">
             <IconAlertCircle size={18} className="mt-1 flex-shrink-0" />
-            <div>
-              <h4 className="alert-heading h6 mb-2">What to configure in your Stripe Dashboard</h4>
-              <ol className="mb-2 ps-3 small">
-                <li>For each of your 3 products (<strong>Starter</strong>, <strong>Professional</strong>, <strong>Business</strong>), add <strong>two prices</strong>: one monthly, one annual. Copy each <strong>Price ID</strong> (starts with <code>price_</code>) below.</li>
-                <li>The products already exist: <code>prod_UPX393kv3F2yh5</code> (Starter), <code>prod_UPX4C6Nne6bwPo</code> (Professional), <code>prod_UPX4oXqZn9sVuS</code> (Business).</li>
-                <li>Go to <strong>Developers → Webhooks</strong> → <strong>Add endpoint</strong>: <code>{window.location.origin}/api/billing/webhook</code></li>
-                <li>Select events: <code>checkout.session.completed</code>, <code>customer.subscription.updated</code>, <code>customer.subscription.deleted</code></li>
-                <li>Reveal the <strong>Signing Secret</strong> (<code>whsec_…</code>) and paste it below.</li>
-                <li>Go to <strong>Developers → API keys</strong>, copy your <strong>Secret key</strong> (<code>sk_…</code>) and paste it below.</li>
-                <li>Enable the <strong>Customer Portal</strong> at <em>Billing → Customer portal</em>.</li>
+            <div className="small">
+              <h4 className="alert-heading h6 mb-2">Stripe setup — step by step</h4>
+              <ol className="mb-2 ps-3">
+                <li>Sign in to <a href="https://dashboard.stripe.com" target="_blank" rel="noopener noreferrer">dashboard.stripe.com <IconExternalLink size={11} /></a></li>
+                <li>Go to <strong>Developers → API keys</strong> — copy your <strong>Secret key</strong> (<code>sk_live_…</code> or <code>sk_test_…</code>) and <strong>Publishable key</strong> (<code>pk_live_…</code>)</li>
+                <li>Go to <strong>Developers → Webhooks → Add endpoint</strong> — paste this URL: <code className="user-select-all">{webhookUrl}</code></li>
+                <li>Select events: <code>checkout.session.completed</code>, <code>customer.subscription.updated</code>, <code>customer.subscription.deleted</code>, <code>payment_intent.succeeded</code></li>
+                <li>Click "Reveal" on the webhook's <strong>Signing secret</strong> (<code>whsec_…</code>) and paste it below</li>
+                <li>Go to <strong>Products</strong> — create your 3 plans (Starter/Professional/Business), each with a monthly and annual price. Copy each <strong>Price ID</strong> (<code>price_…</code>) below</li>
+                <li>Enable the <strong>Customer Portal</strong> at <em>Settings → Billing → Customer portal</em>. Optional: copy the Portal Configuration ID (<code>bpc_…</code>) to customise the portal appearance</li>
               </ol>
-              <p className="mb-0 small text-secondary">Use <code>sk_test_</code> / <code>whsec_test_</code> during development. Switch to <code>sk_live_</code> in production.</p>
+              <p className="mb-0 text-secondary">Use <code>sk_test_</code> during development, <code>sk_live_</code> in production. Keep them in sync.</p>
             </div>
           </div>
         </div>
@@ -502,81 +525,186 @@ const StripeSettingsPanel = () => {
           <div className="card-header">
             <h3 className="card-title mb-0">
               <IconSettings size={16} className="me-2" />
-              Update Stripe credentials
+              Stripe credentials &amp; configuration
             </h3>
           </div>
           <div className="card-body">
             <form onSubmit={form.handleSubmit(onSubmit)}>
               <div className="row g-3">
-                {/* Secrets */}
+
+                {/* ── API Keys ── */}
+                <div className="col-12">
+                  <h5 className="text-secondary small fw-semibold text-uppercase mb-0">API Keys</h5>
+                </div>
+
                 <div className="col-md-6">
-                  <label className="form-label">
-                    Stripe Secret Key
-                    <span className="text-secondary ms-1 small">(leave blank to keep existing)</span>
+                  <label className="form-label fw-semibold">
+                    Secret Key
+                    <span className="text-secondary ms-1 fw-normal small">(leave blank to keep existing)</span>
                   </label>
                   <div className="input-group">
                     <input
                       type={showKey ? 'text' : 'password'}
                       className="form-control font-monospace"
-                      placeholder={settings?.stripeApiKeySet ? 'Enter new key to replace' : 'sk_live_... or sk_test_...'}
+                      placeholder={settings?.stripeApiKeySet ? 'Enter new key to replace' : 'sk_live_… or sk_test_…'}
                       {...form.register('stripeApiKey')}
                     />
                     <button type="button" className="btn btn-outline-secondary" onClick={() => setShowKey((v) => !v)}>
                       {showKey ? <IconEyeOff size={14} /> : <IconEye size={14} />}
                     </button>
                   </div>
+                  <div className="form-hint">
+                    Your Stripe <strong>server-side</strong> secret. Never expose this to clients.
+                    Find it at <strong>Developers → API keys → Secret key</strong>. Format: <code>sk_live_…</code> or <code>sk_test_…</code>
+                  </div>
                 </div>
 
                 <div className="col-md-6">
-                  <label className="form-label">
+                  <label className="form-label fw-semibold">Publishable Key</label>
+                  <input
+                    className="form-control font-monospace"
+                    placeholder="pk_live_… or pk_test_…"
+                    {...form.register('stripePublishableKey')}
+                  />
+                  <div className="form-hint">
+                    Safe to expose publicly — used in the browser for Stripe.js payment forms.
+                    Find it at <strong>Developers → API keys → Publishable key</strong>. Format: <code>pk_live_…</code>
+                  </div>
+                </div>
+
+                {/* ── Webhook ── */}
+                <div className="col-12 mt-1">
+                  <h5 className="text-secondary small fw-semibold text-uppercase mb-0">Webhook</h5>
+                </div>
+
+                <div className="col-md-6">
+                  <label className="form-label fw-semibold">
                     Webhook Signing Secret
-                    <span className="text-secondary ms-1 small">(leave blank to keep existing)</span>
+                    <span className="text-secondary ms-1 fw-normal small">(leave blank to keep existing)</span>
                   </label>
                   <div className="input-group">
                     <input
                       type={showWebhookSecret ? 'text' : 'password'}
                       className="form-control font-monospace"
-                      placeholder={settings?.stripeWebhookSecretSet ? 'Enter new secret to replace' : 'whsec_...'}
+                      placeholder={settings?.stripeWebhookSecretSet ? 'Enter new secret to replace' : 'whsec_…'}
                       {...form.register('stripeWebhookSecret')}
                     />
                     <button type="button" className="btn btn-outline-secondary" onClick={() => setShowWebhookSecret((v) => !v)}>
                       {showWebhookSecret ? <IconEyeOff size={14} /> : <IconEye size={14} />}
                     </button>
                   </div>
+                  <div className="form-hint">
+                    Used to verify that webhook events genuinely come from Stripe.
+                    <strong> Developers → Webhooks → [your endpoint] → Signing secret → Reveal</strong>. Format: <code>whsec_…</code>
+                  </div>
                 </div>
 
-                {/* Price IDs — grouped by plan */}
-                <div className="col-12"><hr className="my-1" /><p className="text-secondary small mb-0 fw-semibold">Starter — $14/mo · $9/mo billed annually</p></div>
                 <div className="col-md-6">
-                  <label className="form-label">Starter Monthly Price ID</label>
-                  <input className="form-control font-monospace" placeholder="price_..." {...form.register('stripeStarterMonthlyPriceId')} />
-                </div>
-                <div className="col-md-6">
-                  <label className="form-label">Starter Annual Price ID</label>
-                  <input className="form-control font-monospace" placeholder="price_..." {...form.register('stripeStarterAnnualPriceId')} />
-                </div>
-
-                <div className="col-12"><hr className="my-1" /><p className="text-secondary small mb-0 fw-semibold">Professional — $29/mo · $24/mo billed annually</p></div>
-                <div className="col-md-6">
-                  <label className="form-label">Professional Monthly Price ID</label>
-                  <input className="form-control font-monospace" placeholder="price_..." {...form.register('stripeProfessionalMonthlyPriceId')} />
-                </div>
-                <div className="col-md-6">
-                  <label className="form-label">Professional Annual Price ID</label>
-                  <input className="form-control font-monospace" placeholder="price_..." {...form.register('stripeProfessionalAnnualPriceId')} />
+                  <label className="form-label fw-semibold">Webhook Endpoint URL</label>
+                  <div className="input-group">
+                    <input className="form-control font-monospace text-secondary" value={webhookUrl} readOnly />
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary"
+                      onClick={() => { void navigator.clipboard.writeText(webhookUrl); toast.success('Copied!'); }}
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <div className="form-hint">
+                    Paste this URL when adding a webhook endpoint in Stripe. This is your server's billing webhook.
+                  </div>
                 </div>
 
-                <div className="col-12"><hr className="my-1" /><p className="text-secondary small mb-0 fw-semibold">Business — $59/mo · $49/mo billed annually</p></div>
+                {/* ── Portal config ID ── */}
                 <div className="col-md-6">
-                  <label className="form-label">Business Monthly Price ID</label>
-                  <input className="form-control font-monospace" placeholder="price_..." {...form.register('stripeBusinessMonthlyPriceId')} />
-                </div>
-                <div className="col-md-6">
-                  <label className="form-label">Business Annual Price ID</label>
-                  <input className="form-control font-monospace" placeholder="price_..." {...form.register('stripeBusinessAnnualPriceId')} />
+                  <label className="form-label fw-semibold">
+                    Portal Configuration ID
+                    <span className="text-secondary ms-1 fw-normal small">(optional)</span>
+                  </label>
+                  <input
+                    className="form-control font-monospace"
+                    placeholder="bpc_…"
+                    {...form.register('stripePortalConfigurationId')}
+                  />
+                  <div className="form-hint">
+                    Customises which features contractors see in the billing self-service portal.
+                    Leave blank to use Stripe's default. Find it at <strong>Settings → Billing → Customer portal → Configuration ID</strong>. Format: <code>bpc_…</code>
+                  </div>
                 </div>
 
-                <div className="col-12">
+                {/* ── App URL ── */}
+                <div className="col-md-6">
+                  <label className="form-label fw-semibold">App URL</label>
+                  <input
+                    className="form-control"
+                    placeholder="https://app.jobrythm.com"
+                    {...form.register('appUrl')}
+                  />
+                  <div className="form-hint">
+                    The public URL where your app is hosted (no trailing slash). Used to build client portal links in quote/invoice emails.
+                    Example: <code>https://app.jobrythm.com</code>
+                  </div>
+                </div>
+
+                {/* ── Price IDs — Starter ── */}
+                <div className="col-12 mt-1">
+                  <h5 className="text-secondary small fw-semibold text-uppercase mb-0">Price IDs — Starter plan ($14/mo · $9/mo billed annually)</h5>
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label fw-semibold">Starter Monthly Price ID</label>
+                  <input className="form-control font-monospace" placeholder="price_…" {...form.register('stripeStarterMonthlyPriceId')} />
+                  <div className="form-hint">
+                    Found in your Stripe Dashboard under <strong>Products → Starter → Monthly price → Price ID</strong>
+                  </div>
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label fw-semibold">Starter Annual Price ID</label>
+                  <input className="form-control font-monospace" placeholder="price_…" {...form.register('stripeStarterAnnualPriceId')} />
+                  <div className="form-hint">
+                    Found in your Stripe Dashboard under <strong>Products → Starter → Annual price → Price ID</strong>
+                  </div>
+                </div>
+
+                {/* ── Price IDs — Professional ── */}
+                <div className="col-12 mt-1">
+                  <h5 className="text-secondary small fw-semibold text-uppercase mb-0">Price IDs — Professional plan ($29/mo · $24/mo billed annually)</h5>
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label fw-semibold">Professional Monthly Price ID</label>
+                  <input className="form-control font-monospace" placeholder="price_…" {...form.register('stripeProfessionalMonthlyPriceId')} />
+                  <div className="form-hint">
+                    <strong>Products → Professional → Monthly price → Price ID</strong>
+                  </div>
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label fw-semibold">Professional Annual Price ID</label>
+                  <input className="form-control font-monospace" placeholder="price_…" {...form.register('stripeProfessionalAnnualPriceId')} />
+                  <div className="form-hint">
+                    <strong>Products → Professional → Annual price → Price ID</strong>
+                  </div>
+                </div>
+
+                {/* ── Price IDs — Business ── */}
+                <div className="col-12 mt-1">
+                  <h5 className="text-secondary small fw-semibold text-uppercase mb-0">Price IDs — Business plan ($59/mo · $49/mo billed annually)</h5>
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label fw-semibold">Business Monthly Price ID</label>
+                  <input className="form-control font-monospace" placeholder="price_…" {...form.register('stripeBusinessMonthlyPriceId')} />
+                  <div className="form-hint">
+                    <strong>Products → Business → Monthly price → Price ID</strong>
+                  </div>
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label fw-semibold">Business Annual Price ID</label>
+                  <input className="form-control font-monospace" placeholder="price_…" {...form.register('stripeBusinessAnnualPriceId')} />
+                  <div className="form-hint">
+                    <strong>Products → Business → Annual price → Price ID</strong>
+                  </div>
+                </div>
+
+                <div className="col-12 pt-1">
                   <button className="btn btn-primary" type="submit" disabled={updateSettings.isPending}>
                     {updateSettings.isPending ? 'Saving…' : 'Save Stripe settings'}
                   </button>
@@ -602,7 +730,6 @@ const EmailSettingsPanel = () => {
     defaultValues: {
       smtpHost: '',
       smtpPort: '',
-      smtpSecure: false,
       smtpUser: '',
       smtpPassword: '',
       smtpFromEmail: '',
@@ -616,7 +743,6 @@ const EmailSettingsPanel = () => {
       form.reset({
         smtpHost: settings.smtpHost ?? '',
         smtpPort: settings.smtpPort ?? '',
-        smtpSecure: settings.smtpSecure ?? false,
         smtpUser: settings.smtpUser ?? '',
         smtpPassword: '',
         smtpFromEmail: settings.smtpFromEmail ?? '',
@@ -627,10 +753,9 @@ const EmailSettingsPanel = () => {
   }, [settings, form]);
 
   const onSubmit = (values: EmailSettingsValues) => {
-    const payload: Record<string, string | boolean> = {};
+    const payload: Record<string, string> = {};
     if (values.smtpHost !== undefined) payload.smtpHost = values.smtpHost?.trim() ?? '';
     if (values.smtpPort !== undefined) payload.smtpPort = values.smtpPort?.trim() ?? '';
-    if (values.smtpSecure !== undefined) payload.smtpSecure = values.smtpSecure;
     if (values.smtpUser !== undefined) payload.smtpUser = values.smtpUser?.trim() ?? '';
     if (values.smtpPassword?.trim()) payload.smtpPassword = values.smtpPassword.trim();
     if (values.smtpFromEmail !== undefined) payload.smtpFromEmail = values.smtpFromEmail?.trim() ?? '';
@@ -657,22 +782,46 @@ const EmailSettingsPanel = () => {
 
   return (
     <div className="row g-4">
-      {/* Setup guide */}
+      {/* Provider guide */}
       <div className="col-12">
         <div className="alert alert-info" role="alert">
           <div className="d-flex gap-2 align-items-start">
             <IconAlertCircle size={18} className="mt-1 flex-shrink-0" />
-            <div>
-              <h4 className="alert-heading h6 mb-2">Proton Mail SMTP settings</h4>
-              <p className="mb-1 small">To send email via Proton Mail, use the following SMTP settings:</p>
-              <ul className="mb-2 ps-3 small">
-                <li><strong>Host:</strong> <code>smtp.protonmail.ch</code></li>
-                <li><strong>Port:</strong> <code>587</code> (STARTTLS, recommended) or <code>465</code> (SSL/TLS — enable "Secure" below)</li>
-                <li><strong>Username:</strong> your full Proton Mail address (e.g. <code>you@proton.me</code>)</li>
-                <li><strong>Password:</strong> your <strong>Proton Mail Bridge password</strong> (not your account login). Get it from the Proton Mail Bridge app → Settings.</li>
-                <li><strong>From email:</strong> same as your username</li>
-              </ul>
-              <p className="mb-0 small text-secondary">Enable "Secure (SSL/TLS)" only if using port 465. For port 587, leave it unchecked — the connection upgrades via STARTTLS automatically.</p>
+            <div className="small">
+              <h4 className="alert-heading h6 mb-2">SMTP provider quick reference</h4>
+              <div className="row g-2">
+                <div className="col-md-6">
+                  <strong>Gmail / Google Workspace</strong>
+                  <ul className="ps-3 mb-1">
+                    <li>Host: <code>smtp.gmail.com</code> · Port: <code>587</code></li>
+                    <li>Enable <em>2-Step Verification</em>, then create an <strong>App Password</strong> at <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer">myaccount.google.com/apppasswords <IconExternalLink size={10} /></a></li>
+                    <li>Use your Gmail address as both username and From email</li>
+                  </ul>
+                </div>
+                <div className="col-md-6">
+                  <strong>SendGrid</strong>
+                  <ul className="ps-3 mb-1">
+                    <li>Host: <code>smtp.sendgrid.net</code> · Port: <code>587</code></li>
+                    <li>Username: <code>apikey</code> (literal string)</li>
+                    <li>Password: your <a href="https://app.sendgrid.com/settings/api_keys" target="_blank" rel="noopener noreferrer">SendGrid API key <IconExternalLink size={10} /></a></li>
+                  </ul>
+                </div>
+                <div className="col-md-6">
+                  <strong>Mailgun</strong>
+                  <ul className="ps-3 mb-0">
+                    <li>Host: <code>smtp.mailgun.org</code> · Port: <code>587</code></li>
+                    <li>Username &amp; password from your <a href="https://app.mailgun.com/app/domains" target="_blank" rel="noopener noreferrer">Mailgun domain <IconExternalLink size={10} /></a></li>
+                  </ul>
+                </div>
+                <div className="col-md-6">
+                  <strong>Proton Mail</strong>
+                  <ul className="ps-3 mb-0">
+                    <li>Host: <code>smtp.protonmail.ch</code> · Port: <code>587</code></li>
+                    <li>Password: your <strong>Bridge password</strong> (not account login) from the <a href="https://proton.me/mail/bridge" target="_blank" rel="noopener noreferrer">Bridge app <IconExternalLink size={10} /></a></li>
+                  </ul>
+                </div>
+              </div>
+              <p className="mb-0 mt-2 text-secondary">Port <code>587</code> uses STARTTLS (auto-upgrade). Port <code>465</code> uses SSL/TLS directly. Both are secure. Port <code>25</code> is unencrypted — avoid it.</p>
             </div>
           </div>
         </div>
@@ -710,53 +859,45 @@ const EmailSettingsPanel = () => {
           <div className="card-body">
             <form onSubmit={form.handleSubmit(onSubmit)}>
               <div className="row g-3">
-                <div className="col-md-8">
-                  <label className="form-label">SMTP Host</label>
+                <div className="col-md-9">
+                  <label className="form-label fw-semibold">SMTP Host</label>
                   <input
                     className="form-control font-monospace"
-                    placeholder="smtp.protonmail.ch"
+                    placeholder="smtp.gmail.com"
                     {...form.register('smtpHost')}
                   />
+                  <div className="form-hint">The outgoing mail server hostname. See your email provider's SMTP docs.</div>
                 </div>
-                <div className="col-md-2">
-                  <label className="form-label">Port</label>
+                <div className="col-md-3">
+                  <label className="form-label fw-semibold">Port</label>
                   <input
                     className="form-control font-monospace"
                     placeholder="587"
                     {...form.register('smtpPort')}
                   />
-                </div>
-                <div className="col-md-2 d-flex align-items-end">
-                  <label className="form-check form-switch mb-2">
-                    <input
-                      className="form-check-input"
-                      type="checkbox"
-                      role="switch"
-                      {...form.register('smtpSecure')}
-                    />
-                    <span className="form-check-label">Secure (SSL/TLS)</span>
-                  </label>
+                  <div className="form-hint"><code>587</code> (STARTTLS) or <code>465</code> (SSL). Use <code>587</code> if unsure.</div>
                 </div>
 
                 <div className="col-md-6">
-                  <label className="form-label">SMTP Username</label>
+                  <label className="form-label fw-semibold">SMTP Username</label>
                   <input
                     className="form-control"
-                    placeholder="you@proton.me"
+                    placeholder="you@example.com"
                     autoComplete="username"
                     {...form.register('smtpUser')}
                   />
+                  <div className="form-hint">Usually your full email address. For SendGrid, use the literal string <code>apikey</code>.</div>
                 </div>
                 <div className="col-md-6">
-                  <label className="form-label">
+                  <label className="form-label fw-semibold">
                     SMTP Password
-                    <span className="text-secondary ms-1 small">(leave blank to keep existing)</span>
+                    <span className="text-secondary ms-1 fw-normal small">(leave blank to keep existing)</span>
                   </label>
                   <div className="input-group">
                     <input
                       type={showPassword ? 'text' : 'password'}
                       className="form-control"
-                      placeholder={settings?.smtpPasswordSet ? 'Enter new password to replace' : 'Proton Mail Bridge password'}
+                      placeholder={settings?.smtpPasswordSet ? 'Enter new password to replace' : 'App password or API key'}
                       autoComplete="new-password"
                       {...form.register('smtpPassword')}
                     />
@@ -768,28 +909,39 @@ const EmailSettingsPanel = () => {
                       {showPassword ? <IconEyeOff size={14} /> : <IconEye size={14} />}
                     </button>
                   </div>
+                  <div className="form-hint">
+                    Use an <strong>App Password</strong> (not your account password). For Gmail: generate one at <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer">myaccount.google.com/apppasswords <IconExternalLink size={10} /></a>
+                  </div>
                 </div>
 
-                <div className="col-12"><hr className="my-1" /></div>
+                <div className="col-12 mt-1">
+                  <h5 className="text-secondary small fw-semibold text-uppercase mb-0">Sender details</h5>
+                </div>
 
                 <div className="col-md-6">
-                  <label className="form-label">From Email</label>
+                  <label className="form-label fw-semibold">From Email</label>
                   <input
                     className="form-control"
-                    placeholder="you@proton.me"
+                    placeholder="noreply@yourcompany.com"
                     {...form.register('smtpFromEmail')}
                   />
+                  <div className="form-hint">
+                    The email address shown in the "From" field of emails sent to your customers. Must be verified/authorised by your SMTP provider.
+                  </div>
                 </div>
                 <div className="col-md-6">
-                  <label className="form-label">From Name</label>
+                  <label className="form-label fw-semibold">From Name</label>
                   <input
                     className="form-control"
                     placeholder="Jobrythm"
                     {...form.register('smtpFromName')}
                   />
+                  <div className="form-hint">
+                    The display name shown alongside the From email. E.g. <code>Jobrythm</code> or your company name.
+                  </div>
                 </div>
 
-                <div className="col-12">
+                <div className="col-12 pt-1">
                   <button className="btn btn-primary" type="submit" disabled={updateSettings.isPending}>
                     {updateSettings.isPending ? 'Saving…' : 'Save email settings'}
                   </button>
@@ -811,8 +963,8 @@ const EmailSettingsPanel = () => {
           </div>
           <div className="card-body">
             <p className="text-secondary small mb-3">
-              Send a test email to verify your SMTP configuration is working.
-              Leave the field blank to send to your own admin email.
+              Sends a test email to verify your SMTP configuration is working correctly.
+              Leave blank to send to the admin account's email address.
             </p>
             <div className="row g-2 align-items-end">
               <div className="col-md-6">
@@ -846,13 +998,163 @@ const EmailSettingsPanel = () => {
   );
 };
 
+// ── AI / GitHub Models Settings panel ─────────────────────────────────────────
+const AiSettingsPanel = () => {
+  const { data: settings, isLoading } = useAdminSettings();
+  const updateSettings = useUpdateAdminSettings();
+  const [showToken, setShowToken] = useState(false);
+
+  const form = useForm<AiSettingsValues>({
+    resolver: zodResolver(aiSettingsSchema),
+    defaultValues: {
+      githubModelsToken: '',
+      githubModelsModel: 'gpt-4o',
+    },
+  });
+
+  useEffect(() => {
+    if (settings) {
+      form.reset({
+        githubModelsToken: '',
+        githubModelsModel: settings.githubModelsModel ?? 'gpt-4o',
+      });
+    }
+  }, [settings, form]);
+
+  const onSubmit = (values: AiSettingsValues) => {
+    const payload: Record<string, string> = {};
+    if (values.githubModelsToken?.trim()) payload.githubModelsToken = values.githubModelsToken.trim();
+    if (values.githubModelsModel) payload.githubModelsModel = values.githubModelsModel;
+
+    updateSettings.mutate(payload, {
+      onSuccess: () => {
+        toast.success('AI settings saved');
+        form.setValue('githubModelsToken', '');
+      },
+      onError: (err: Error) => toast.error(err.message),
+    });
+  };
+
+  if (isLoading) return <div className="text-secondary py-3">Loading settings…</div>;
+
+  return (
+    <div className="row g-4">
+      {/* What this does */}
+      <div className="col-12">
+        <div className="alert alert-info" role="alert">
+          <div className="d-flex gap-2 align-items-start">
+            <IconAlertCircle size={18} className="mt-1 flex-shrink-0" />
+            <div className="small">
+              <h4 className="alert-heading h6 mb-2">AI quote line-item suggestions — powered by GitHub Models</h4>
+              <p className="mb-2">
+                When enabled, contractors see a <strong>✨ AI Suggest</strong> button on job line items.
+                They describe the job in plain English, and the AI suggests appropriate line items with quantities and prices based on their past jobs.
+              </p>
+              <h5 className="h6 mb-1">How to get a GitHub Models token (free)</h5>
+              <ol className="mb-2 ps-3">
+                <li>Go to <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer">github.com/settings/tokens <IconExternalLink size={10} /></a></li>
+                <li>Click <strong>Generate new token → Fine-grained token</strong></li>
+                <li>Under <strong>Permissions</strong>, expand <em>Account permissions</em> and set <strong>Models</strong> to <code>Read-only</code></li>
+                <li>Set an expiration (90 days or no expiration), click <strong>Generate token</strong></li>
+                <li>Copy the token (starts with <code>github_pat_…</code>) and paste it below</li>
+              </ol>
+              <p className="mb-0 text-secondary">
+                GitHub Models is free for development/low-volume use. For high-volume production usage, provision an Azure OpenAI endpoint instead and replace the base URL in <code>src/routes/ai.ts</code>.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Status card */}
+      <div className="col-12">
+        <div className={`card card-sm ${settings?.aiConfigured ? 'border-success' : 'border-warning'}`}>
+          <div className="card-body py-2 px-3">
+            <div className="d-flex align-items-center gap-2">
+              {settings?.aiConfigured
+                ? <IconCheck size={16} className="text-success" />
+                : <IconAlertCircle size={16} className="text-warning" />
+              }
+              <span className="fw-semibold small">
+                {settings?.aiConfigured ? 'AI configured' : 'AI not configured — AI suggest button will be hidden'}
+              </span>
+              {settings?.aiConfigured && settings.githubModelsModel && (
+                <span className="text-secondary small ms-1">· using <code>{settings.githubModelsModel}</code></span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Settings form */}
+      <div className="col-12">
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title mb-0">
+              <IconSparkles size={16} className="me-2" />
+              GitHub Models configuration
+            </h3>
+          </div>
+          <div className="card-body">
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <div className="row g-3">
+                <div className="col-12">
+                  <label className="form-label fw-semibold">
+                    GitHub Personal Access Token (PAT)
+                    <span className="text-secondary ms-1 fw-normal small">(leave blank to keep existing)</span>
+                  </label>
+                  <div className="input-group">
+                    <input
+                      type={showToken ? 'text' : 'password'}
+                      className="form-control font-monospace"
+                      placeholder={settings?.githubModelsTokenSet ? 'Enter new token to replace' : 'github_pat_…'}
+                      {...form.register('githubModelsToken')}
+                    />
+                    <button type="button" className="btn btn-outline-secondary" onClick={() => setShowToken((v) => !v)}>
+                      {showToken ? <IconEyeOff size={14} /> : <IconEye size={14} />}
+                    </button>
+                  </div>
+                  <div className="form-hint">
+                    A GitHub fine-grained PAT with <strong>Models: Read-only</strong> permission.
+                    Create one at <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer">github.com/settings/tokens <IconExternalLink size={10} /></a>. Format: <code>github_pat_…</code>
+                  </div>
+                </div>
+
+                <div className="col-md-6">
+                  <label className="form-label fw-semibold">Model</label>
+                  <select className="form-select" {...form.register('githubModelsModel')}>
+                    <option value="gpt-4o">gpt-4o (Recommended — best quality)</option>
+                    <option value="gpt-4o-mini">gpt-4o-mini (Faster, cheaper, slightly lower quality)</option>
+                    <option value="o1-mini">o1-mini (Reasoning model — slower)</option>
+                  </select>
+                  <div className="form-hint">
+                    <strong>gpt-4o</strong> produces the best structured line-item suggestions and supports JSON output mode natively.
+                    Use <strong>gpt-4o-mini</strong> to reduce API usage costs on high-volume plans.
+                    The model name is passed directly to the GitHub Models API endpoint (<code>models.inference.ai.azure.com</code>).
+                  </div>
+                </div>
+
+                <div className="col-12 pt-1">
+                  <button className="btn btn-primary" type="submit" disabled={updateSettings.isPending}>
+                    {updateSettings.isPending ? 'Saving…' : 'Save AI settings'}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ── Main page ──────────────────────────────────────────────────────────────────
 export const AdminPage = () => {
   const { user: currentUser } = useAuth();
   const { data: users = [], isLoading, isError, error } = useAdminUsers();
   const deleteUser = useAdminDeleteUser();
 
-  const [tab, setTab] = useState<'dashboard' | 'users' | 'settings' | 'email' | 'sales'>('dashboard');
+  const [tab, setTab] = useState<'dashboard' | 'users' | 'settings' | 'email' | 'ai' | 'sales'>('dashboard');
   const [showCreate, setShowCreate] = useState(false);
   const [editTarget, setEditTarget] = useState<AdminUser | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
@@ -933,6 +1235,15 @@ export const AdminPage = () => {
             </li>
             <li className="nav-item">
               <button
+                className={`nav-link ${tab === 'ai' ? 'active' : ''}`}
+                onClick={() => setTab('ai')}
+              >
+                <IconSparkles size={15} className="me-1" />
+                AI
+              </button>
+            </li>
+            <li className="nav-item">
+              <button
                 className={`nav-link ${tab === 'sales' ? 'active' : ''}`}
                 onClick={() => setTab('sales')}
               >
@@ -949,6 +1260,8 @@ export const AdminPage = () => {
       {tab === 'settings' && <StripeSettingsPanel />}
 
       {tab === 'email' && <EmailSettingsPanel />}
+
+      {tab === 'ai' && <AiSettingsPanel />}
 
       {tab === 'sales' && <SalesPanel />}
 
