@@ -166,6 +166,7 @@ router.post('/checkout', async (req: AuthRequest, res: Response): Promise<void> 
       mode: 'subscription',
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
+      subscription_data: { trial_period_days: 14 },
       success_url: `${base}/settings?tab=billing&status=success`,
       cancel_url: `${base}/settings?tab=billing`,
       customer_email: req.user?.email,

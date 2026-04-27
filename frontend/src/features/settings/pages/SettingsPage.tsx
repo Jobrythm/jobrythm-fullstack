@@ -364,6 +364,12 @@ export const SettingsPage = () => {
                                 </div>
                               )}
                             </div>
+                            <div className="mb-2">
+                              <span className="badge bg-green-lt text-green">
+                                <IconCheck size={11} className="me-1" />
+                                14-day free trial
+                              </span>
+                            </div>
                             <div className="text-secondary small mb-3">
                               <strong>{plan.users}</strong> · {plan.jobs}
                             </div>
@@ -383,7 +389,7 @@ export const SettingsPage = () => {
                                 onClick={() => checkoutMutation.mutate({ planTier: plan.tier, billingPeriod })}
                                 disabled={checkoutMutation.isPending}
                               >
-                                {checkoutMutation.isPending ? 'Redirecting…' : `Get ${plan.name}`}
+                                {checkoutMutation.isPending ? 'Redirecting…' : `Start free trial`}
                               </button>
                             ) : (
                               <button className="btn btn-outline-secondary w-100" disabled title="Price not configured">
