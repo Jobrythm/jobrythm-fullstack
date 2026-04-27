@@ -105,3 +105,30 @@ export async function getEmailConfig(): Promise<EmailConfig> {
 export function isKeySet(value: string | null): boolean {
   return Boolean(value && value.trim().length > 0);
 }
+
+export interface AdPlatformConfig {
+  googleClientId: string | null;
+  googleClientSecret: string | null;
+  googleDeveloperToken: string | null;
+  metaAppId: string | null;
+  metaAppSecret: string | null;
+}
+
+export async function getAdPlatformConfig(): Promise<AdPlatformConfig> {
+  const [googleClientId, googleClientSecret, googleDeveloperToken, metaAppId, metaAppSecret] =
+    await Promise.all([
+      getSetting('google_ads_client_id'),
+      getSetting('google_ads_client_secret'),
+      getSetting('google_ads_developer_token'),
+      getSetting('meta_app_id'),
+      getSetting('meta_app_secret'),
+    ]);
+
+  return {
+    googleClientId: googleClientId ?? process.env.GOOGLE_ADS_CLIENT_ID ?? null,
+    googleClientSecret: googleClientSecret ?? process.env.GOOGLE_ADS_CLIENT_SECRET ?? null,
+    googleDeveloperToken: googleDeveloperToken ?? process.env.GOOGLE_ADS_DEVELOPER_TOKEN ?? null,
+    metaAppId: metaAppId ?? process.env.META_APP_ID ?? null,
+    metaAppSecret: metaAppSecret ?? process.env.META_APP_SECRET ?? null,
+  };
+}

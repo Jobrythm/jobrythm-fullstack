@@ -19,6 +19,8 @@ import invoicesRoutes from './routes/invoices.js';
 import dashboardRoutes from './routes/dashboard.js';
 import adminRoutes from './routes/admin.js';
 import adminSettingsRoutes from './routes/adminSettings.js';
+import adminSalesRoutes from './routes/adminSales.js';
+import adminAdsRoutes from './routes/adminAds.js';
 import billingRoutes, { stripeWebhookHandler } from './routes/billing.js';
 import { User } from './entities/User.js';
 import { hashPassword } from './utils/auth.js';
@@ -93,6 +95,8 @@ app.use('/api/invoices', apiLimiter, invoicesRoutes);
 app.use('/api/dashboard', apiLimiter, dashboardRoutes);
 app.use('/api/admin', apiLimiter, adminRoutes);
 app.use('/api/admin/settings', apiLimiter, adminSettingsRoutes);
+app.use('/api/admin/sales', apiLimiter, adminSalesRoutes);
+app.use('/api/admin/ads', apiLimiter, adminAdsRoutes);
 app.use('/api/billing', apiLimiter, billingRoutes);
 
 // Health check

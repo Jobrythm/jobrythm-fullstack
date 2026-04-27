@@ -237,3 +237,113 @@ export interface InvoicePayload {
   vatRate: number;
 }
 
+// ── Sales Platform ─────────────────────────────────────────────────────────────
+
+export type LeadStatus = 'lead' | 'trial' | 'customer' | 'lost';
+export type LeadSource = 'organic' | 'referral' | 'paid' | 'direct' | 'other';
+
+export interface Lead {
+  id: string;
+  name: string;
+  email: string;
+  company?: string;
+  phone?: string;
+  source: LeadSource;
+  status: LeadStatus;
+  notes?: string;
+  assignedToUserId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EmailTemplate {
+  id: string;
+  name: string;
+  subject: string;
+  bodyHtml: string;
+  bodyText?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CampaignStatus = 'draft' | 'sent';
+
+export interface EmailCampaign {
+  id: string;
+  name: string;
+  templateId?: string | null;
+  subject: string;
+  recipients: string[];
+  status: CampaignStatus;
+  sentAt?: string | null;
+  recipientCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ── Advertising Platform ───────────────────────────────────────────────────────
+
+export type AdPlatform = 'google_ads' | 'meta' | 'youtube';
+export type AdCampaignStatus = 'active' | 'paused' | 'completed';
+export type AdCreativeType = 'image' | 'video' | 'text';
+
+export interface AdPlatformConnectionInfo {
+  id: string;
+  platform: AdPlatform;
+  accountId?: string | null;
+  accountName?: string | null;
+  tokenExpiresAt?: string | null;
+  createdAt: string;
+}
+
+export interface AdPlatformStatus {
+  platform: AdPlatform;
+  connected: boolean;
+  credentialsConfigured: boolean;
+  connection: AdPlatformConnectionInfo | null;
+}
+
+export interface AdConnectionsResponse {
+  platforms: AdPlatformStatus[];
+}
+
+export interface AdCampaign {
+  id: string;
+  platform: AdPlatform;
+  platformCampaignId?: string;
+  name: string;
+  status: AdCampaignStatus;
+  budgetCents: number;
+  startDate?: string;
+  endDate?: string;
+  impressions: number;
+  clicks: number;
+  spendCents: number;
+  lastSyncedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdCreative {
+  id: string;
+  platform: AdPlatform;
+  type: AdCreativeType;
+  title: string;
+  body?: string;
+  mediaUrl?: string;
+  platformCreativeId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdPlatformSettings {
+  googleClientId: string;
+  googleClientIdSet: boolean;
+  googleClientSecretSet: boolean;
+  googleDeveloperTokenSet: boolean;
+  metaAppId: string;
+  metaAppIdSet: boolean;
+  metaAppSecretSet: boolean;
+}
+
+

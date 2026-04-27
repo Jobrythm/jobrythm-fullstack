@@ -36,3 +36,41 @@ export enum InvoiceStatus {
   OVERDUE = 'overdue',
   CANCELLED = 'cancelled',
 }
+
+export enum LeadStatus {
+  LEAD = 'lead',
+  TRIAL = 'trial',
+  CUSTOMER = 'customer',
+  LOST = 'lost',
+}
+
+export enum LeadSource {
+  ORGANIC = 'organic',
+  REFERRAL = 'referral',
+  PAID = 'paid',
+  DIRECT = 'direct',
+  OTHER = 'other',
+}
+
+export enum CampaignStatus {
+  DRAFT = 'draft',
+  SENT = 'sent',
+}
+
+export enum AdPlatform {
+  GOOGLE_ADS = 'google_ads',
+  META = 'meta',
+  YOUTUBE = 'youtube',
+}
+
+export enum AdCampaignStatus {
+  ACTIVE = 'active',
+  PAUSED = 'paused',
+  COMPLETED = 'completed',
+}
+
+export enum AdCreativeType {
+  IMAGE = 'image',
+  VIDEO = 'video',
+  TEXT = 'text',
+}

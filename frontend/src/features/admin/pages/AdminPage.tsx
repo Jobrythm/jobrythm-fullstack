@@ -17,6 +17,7 @@ import {
   IconUsers,
   IconEdit,
   IconAlertCircle,
+  IconTargetArrow,
 } from '@tabler/icons-react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -38,6 +39,7 @@ import {
   useTestEmail,
   useUpdateAdminSettings,
 } from '../hooks/useAdminUsers';
+import { SalesPanel } from './SalesPanel';
 
 const PLANS: AdminUserPlan[] = ['starter', 'professional', 'business', 'admin'];
 
@@ -850,7 +852,7 @@ export const AdminPage = () => {
   const { data: users = [], isLoading, isError, error } = useAdminUsers();
   const deleteUser = useAdminDeleteUser();
 
-  const [tab, setTab] = useState<'dashboard' | 'users' | 'settings' | 'email'>('dashboard');
+  const [tab, setTab] = useState<'dashboard' | 'users' | 'settings' | 'email' | 'sales'>('dashboard');
   const [showCreate, setShowCreate] = useState(false);
   const [editTarget, setEditTarget] = useState<AdminUser | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
@@ -929,6 +931,15 @@ export const AdminPage = () => {
                 Email / SMTP
               </button>
             </li>
+            <li className="nav-item">
+              <button
+                className={`nav-link ${tab === 'sales' ? 'active' : ''}`}
+                onClick={() => setTab('sales')}
+              >
+                <IconTargetArrow size={15} className="me-1" />
+                Sales
+              </button>
+            </li>
           </ul>
         </div>
       </div>
@@ -938,6 +949,8 @@ export const AdminPage = () => {
       {tab === 'settings' && <StripeSettingsPanel />}
 
       {tab === 'email' && <EmailSettingsPanel />}
+
+      {tab === 'sales' && <SalesPanel />}
 
       {tab === 'users' && (
         <>
