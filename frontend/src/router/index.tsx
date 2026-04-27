@@ -22,6 +22,7 @@ import { AdminPage } from '../features/admin/pages/AdminPage';
 import { PublicQuotePage } from '../features/portal/pages/PublicQuotePage';
 import { PublicInvoicePage } from '../features/portal/pages/PublicInvoicePage';
 import { SchedulePage } from '../features/schedule/pages/SchedulePage';
+import { TeamPage } from '../features/team/pages/TeamPage';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -50,6 +51,7 @@ export const router = createBrowserRouter([
           { path: '/clients/new', element: <NewClientPage /> },
           { path: '/clients/:id', element: <ClientDetailPage /> },
           { path: '/schedule', element: <SchedulePage /> },
+          { path: '/team', element: <TeamPage /> },
           { path: '/quotes', element: <QuotesPage /> },
           { path: '/quotes/:id', element: <QuoteDetailPage /> },
           { path: '/invoices', element: <InvoicesPage /> },

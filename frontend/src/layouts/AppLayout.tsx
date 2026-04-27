@@ -10,6 +10,7 @@ import {
   IconUsers,
   IconShieldLock,
   IconCrown,
+  IconUsersGroup,
 } from '@tabler/icons-react';
 import { type ComponentType, type ReactNode, useMemo, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
@@ -44,6 +45,7 @@ const titleMap: Record<string, string> = {
   jobs: 'Jobs',
   clients: 'Clients',
   schedule: 'Schedule',
+  team: 'Team',
   quotes: 'Quotes',
   invoices: 'Invoices',
   settings: 'Settings',
@@ -88,6 +90,7 @@ export const AppLayout = () => {
         { to: '/jobs', label: 'Jobs', icon: IconBriefcase, badge: activeJobs.length },
         { to: '/clients', label: 'Clients', icon: IconUsers },
         { to: '/schedule', label: 'Schedule', icon: IconCalendar },
+        { to: '/team', label: 'Team', icon: IconUsersGroup },
         { to: '/quotes', label: 'Quotes', icon: IconFileText },
         { to: '/invoices', label: 'Invoices', icon: IconReceipt },
         { divider: true },
