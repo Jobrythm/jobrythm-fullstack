@@ -145,6 +145,15 @@ export interface AppSettings {
   stripeProfessionalAnnualPriceId: string;
   stripeBusinessMonthlyPriceId: string;
   stripeBusinessAnnualPriceId: string;
+  smtpHost: string;
+  smtpPort: string;
+  smtpSecure: boolean;
+  smtpUser: string;
+  smtpPassword: string;
+  smtpPasswordSet: boolean;
+  smtpFromEmail: string;
+  smtpFromName: string;
+  emailConfigured: boolean;
 }
 
 export interface BillingStatus {

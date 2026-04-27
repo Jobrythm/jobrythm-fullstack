@@ -5,6 +5,7 @@ import {
   adminGetSettings,
   adminGetStats,
   adminGetUsers,
+  adminTestEmail,
   adminUpdateSettings,
   adminUpdateUser,
 } from '../../../api/admin';
@@ -73,5 +74,11 @@ export const useAdminStats = () => {
   return useQuery({
     queryKey: adminStatsQueryKey,
     queryFn: adminGetStats,
+  });
+};
+
+export const useTestEmail = () => {
+  return useMutation({
+    mutationFn: (to?: string) => adminTestEmail(to),
   });
 };

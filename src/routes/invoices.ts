@@ -8,6 +8,7 @@ import { InvoiceStatus } from '../types/enums.js';
 import { addDays } from 'date-fns';
 import { getNextNumber } from '../utils/numberSequence.js';
 import { calculateTotals } from '../utils/calculations.js';
+import { sendInvoiceEmail } from '../utils/email.js';
 
 const router = Router();
 
@@ -194,13 +195,14 @@ router.patch('/:id/paid', async (req: AuthRequest, res: Response): Promise<void>
   }
 });
 
-// Send invoice (stub - would integrate with email service)
+// Send invoice (integrates with SMTP email service)
 router.post('/:id/send', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const invoiceRepository = AppDataSource.getRepository(Invoice);
     const invoice = await invoiceRepository
       .createQueryBuilder('invoice')
       .leftJoinAndSelect('invoice.job', 'job')
+      .leftJoinAndSelect('job.client', 'client')
       .where('invoice.id = :id', { id: req.params.id })
       .andWhere('job.userId = :userId', { userId: req.user!.userId })
       .getOne();
@@ -215,7 +217,24 @@ router.post('/:id/send', async (req: AuthRequest, res: Response): Promise<void> 
 
     await invoiceRepository.save(invoice);
 
-    // TODO: Send email with PDF attachment
+    // Send email to client if they have an email address on file
+    const clientEmail = invoice.job?.client?.email;
+    if (clientEmail) {
+      try {
+        const userRepository = AppDataSource.getRepository(User);
+        const user = await userRepository.findOne({ where: { id: req.user!.userId } });
+        await sendInvoiceEmail(
+          clientEmail,
+          invoice.invoiceNumber,
+          invoice.job.client!.name,
+          user?.companyName,
+        );
+      } catch (emailError) {
+        console.error('Failed to send invoice email:', emailError);
+        // Email failure is non-fatal — the invoice is already marked sent
+      }
+    }
+
     res.json({ message: 'Invoice sent successfully', invoice });
   } catch (error) {
     console.error('Send invoice error:', error);

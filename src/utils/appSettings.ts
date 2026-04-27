@@ -69,6 +69,38 @@ export async function getStripeConfig(): Promise<StripeConfig> {
   };
 }
 
+export interface EmailConfig {
+  host: string | null;
+  port: number | null;
+  secure: boolean;
+  user: string | null;
+  password: string | null;
+  fromEmail: string | null;
+  fromName: string | null;
+}
+
+export async function getEmailConfig(): Promise<EmailConfig> {
+  const [host, port, secure, user, password, fromEmail, fromName] = await Promise.all([
+    getSetting('smtp_host'),
+    getSetting('smtp_port'),
+    getSetting('smtp_secure'),
+    getSetting('smtp_user'),
+    getSetting('smtp_password'),
+    getSetting('smtp_from_email'),
+    getSetting('smtp_from_name'),
+  ]);
+
+  return {
+    host: host ?? process.env.SMTP_HOST ?? null,
+    port: port ? parseInt(port, 10) : process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : null,
+    secure: secure !== null ? secure === 'true' : process.env.SMTP_SECURE === 'true',
+    user: user ?? process.env.SMTP_USER ?? null,
+    password: password ?? process.env.SMTP_PASSWORD ?? null,
+    fromEmail: fromEmail ?? process.env.SMTP_FROM_EMAIL ?? null,
+    fromName: fromName ?? process.env.SMTP_FROM_NAME ?? null,
+  };
+}
+
 /** Returns true if the key looks like it was already saved (non-empty). */
 export function isKeySet(value: string | null): boolean {
   return Boolean(value && value.trim().length > 0);
