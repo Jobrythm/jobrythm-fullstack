@@ -175,7 +175,7 @@ router.get('/stats', async (_req: AuthRequest, res: Response): Promise<void> => 
 
     // Revenue — invoices store amounts as integer cents
     const totalRevenue = paidInvoices.reduce((sum, inv) => sum + Number(inv.totalGross), 0);
-    const revenueLaste30d = paidInvoicesLast30d.reduce((sum, inv) => sum + Number(inv.totalGross), 0);
+    const revenueLast30d = paidInvoicesLast30d.reduce((sum, inv) => sum + Number(inv.totalGross), 0);
 
     res.json({
       totalCustomers: customers.length,
@@ -186,7 +186,7 @@ router.get('/stats', async (_req: AuthRequest, res: Response): Promise<void> => 
       quotesLast30d,
       totalPaidInvoices: paidInvoices.length,
       totalRevenueCents: totalRevenue,
-      revenueLast30dCents: revenueLaste30d,
+      revenueLast30dCents: revenueLast30d,
     });
   } catch (error) {
     console.error('Admin stats error:', error);

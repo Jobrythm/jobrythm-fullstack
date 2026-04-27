@@ -40,6 +40,15 @@ const titleMap: Record<string, string> = {
   admin: 'Admin Console',
 };
 
+const EXACT_MATCH_PATHS = new Set(['/dashboard', '/']);
+
+const isNavItemActive = (itemPath: string, currentPath: string): boolean => {
+  if (EXACT_MATCH_PATHS.has(itemPath)) {
+    return currentPath === itemPath || currentPath === '/' || currentPath === '/dashboard';
+  }
+  return currentPath.startsWith(itemPath);
+};
+
 export const AppLayout = () => {
   const [topbarAction, setTopbarAction] = useState<ReactNode>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -93,7 +102,7 @@ export const AppLayout = () => {
                       <hr className="navbar-divider" />
                     </li>
                   ) : (
-                    <li key={item.to} className={cn('nav-item', (item.to === '/' || item.to === '/dashboard' ? location.pathname === item.to || location.pathname === '/' || location.pathname === '/dashboard' : location.pathname.startsWith(item.to)) && 'active')}>
+                    <li key={item.to} className={cn('nav-item', isNavItemActive(item.to, location.pathname) && 'active')}>
                       <Link to={item.to} className="nav-link" onClick={() => setMobileOpen(false)}>
                         <span className="nav-link-icon d-md-none d-lg-inline-block">
                           <item.icon size={18} />

@@ -54,8 +54,11 @@ export const JobDetailPage = () => {
     link.download = fileName;
     link.rel = 'noopener noreferrer';
     link.target = '_blank';
-    link.onclick = () => { window.setTimeout(() => URL.revokeObjectURL(url), 0); };
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
+    // Revoke after a short delay to ensure the browser has started the download
+    window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
   };
 
   if (isLoading) return <LoadingSpinner label="Loading job..." />;

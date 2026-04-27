@@ -73,7 +73,8 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
         const session = event.data.object as Stripe.Checkout.Session;
         if (session.mode !== 'subscription') break;
 
-        // Prefer metadata.userId (set at checkout creation); fall back to email
+        // Prefer metadata.userId (set at checkout creation) for reliable user lookup.
+        // Fall back to email for sessions created before metadata was added.
         const metaUserId = session.metadata?.userId;
         const email = session.customer_email ?? session.customer_details?.email;
         const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
