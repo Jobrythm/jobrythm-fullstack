@@ -6,6 +6,7 @@ import { LoadingSpinner } from '../../../components/LoadingSpinner';
 import { useClients } from '../../clients/hooks/useClients';
 import { JobForm } from '../components/JobForm';
 import { useCreateJob } from '../hooks/useJobs';
+import { normalizeApiError } from '../../../api/errors';
 
 export const NewJobPage = () => {
   const navigate = useNavigate();
@@ -17,7 +18,7 @@ export const NewJobPage = () => {
 
   const isPlanLimitError =
     createMutation.isError &&
-    (createMutation.error as { status?: number } & Error).message?.includes('Starter plan');
+    normalizeApiError(createMutation.error).code === 'PLAN_LIMIT_EXCEEDED';
 
   return (
     <>

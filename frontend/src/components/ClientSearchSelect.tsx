@@ -81,7 +81,7 @@ export const ClientSearchSelect = ({
         {open ? (
           <input
             ref={inputRef}
-            className="border-0 flex-grow-1 bg-transparent p-0 outline-none"
+            className="border-0 flex-grow-1 bg-transparent p-0"
             style={{ outline: 'none', minWidth: 0 }}
             placeholder="Search clients…"
             value={query}

@@ -103,7 +103,7 @@ export const RegisterPage = () => {
       // Step 1: create the account
       const authData = await registerUser({
         name: account.name,
-        companyName: account.companyName,
+        companyName: account.companyName || undefined,
         email: account.email,
         password: account.password,
       });
@@ -260,7 +260,7 @@ export const RegisterPage = () => {
                       <span className="text-secondary small">/mo</span>
                       {billingAnnual && (
                         <div className="text-secondary" style={{ fontSize: '0.75rem' }}>
-                          billed £{price * 12}/yr · was £{plan.monthlyPrice}/mo
+                          billed £{price * 12}/year · was £{plan.monthlyPrice}/mo
                         </div>
                       )}
                     </div>
