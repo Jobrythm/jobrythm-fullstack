@@ -4,10 +4,14 @@ import { User } from '../entities/User.js';
 import { Job } from '../entities/Job.js';
 import { Invoice } from '../entities/Invoice.js';
 import { Quote } from '../entities/Quote.js';
+import { Client } from '../entities/Client.js';
+import { LineItem } from '../entities/LineItem.js';
+import { RefreshToken } from '../entities/RefreshToken.js';
+import { NumberSequence } from '../entities/NumberSequence.js';
 import { authenticateToken, requireAdmin, AuthRequest } from '../middleware/auth.js';
 import { hashPassword } from '../utils/auth.js';
 import { SubscriptionPlan, InvoiceStatus, JobStatus } from '../types/enums.js';
-import { MoreThanOrEqual } from 'typeorm';
+import { In, MoreThanOrEqual } from 'typeorm';
 
 const router = Router();
 
@@ -125,6 +129,22 @@ router.delete('/users/:id', async (req: AuthRequest, res: Response): Promise<voi
       res.status(404).json({ error: 'User not found' });
       return;
     }
+
+    // Delete all related data in dependency order before removing the user
+    const jobRepository = AppDataSource.getRepository(Job);
+    const jobs = await jobRepository.find({ where: { userId: user.id }, select: ['id'] });
+    const jobIds = jobs.map(j => j.id);
+
+    if (jobIds.length > 0) {
+      await AppDataSource.getRepository(Quote).delete({ jobId: In(jobIds) });
+      await AppDataSource.getRepository(Invoice).delete({ jobId: In(jobIds) });
+      await AppDataSource.getRepository(LineItem).delete({ jobId: In(jobIds) });
+      await jobRepository.delete({ userId: user.id });
+    }
+
+    await AppDataSource.getRepository(Client).delete({ userId: user.id });
+    await AppDataSource.getRepository(RefreshToken).delete({ userId: user.id });
+    await AppDataSource.getRepository(NumberSequence).delete({ userId: user.id });
 
     await userRepository.remove(user);
     res.json({ success: true });
