@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CurrencyDisplay } from '../../../components/CurrencyDisplay';
+import { EmptyState } from '../../../components/EmptyState';
 import { TableSkeleton } from '../../../components/TableSkeleton';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { formatDate } from '../../../utils';
@@ -28,6 +29,8 @@ export const QuotesPage = () => {
 
       {isLoading ? (
         <TableSkeleton rows={6} columns={8} />
+      ) : quotes.length === 0 ? (
+        <EmptyState icon={null} title="No quotes yet" description="Quotes will appear here once you generate them from a job." />
       ) : (
         <div className="table-responsive">
           <table className="table table-vcenter card-table">

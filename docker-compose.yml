@@ -17,6 +17,7 @@ services:
       JWT_EXPIRES_IN: 1h
       REFRESH_TOKEN_EXPIRES_IN_DAYS: 30
       CORS_ORIGINS: http://localhost:8080,http://127.0.0.1:8080
+      APP_URL: ${APP_URL:-http://localhost:8080}
       STRIPE_API_KEY: ${STRIPE_API_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
       STRIPE_PRO_PRICE_ID: ${STRIPE_PRO_PRICE_ID:-}

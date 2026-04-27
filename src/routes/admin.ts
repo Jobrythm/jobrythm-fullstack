@@ -1,9 +1,13 @@
 import { Router, Response } from 'express';
 import { AppDataSource } from '../config/database.js';
 import { User } from '../entities/User.js';
+import { Job } from '../entities/Job.js';
+import { Invoice } from '../entities/Invoice.js';
+import { Quote } from '../entities/Quote.js';
 import { authenticateToken, requireAdmin, AuthRequest } from '../middleware/auth.js';
 import { hashPassword } from '../utils/auth.js';
-import { SubscriptionPlan } from '../types/enums.js';
+import { SubscriptionPlan, InvoiceStatus, JobStatus } from '../types/enums.js';
+import { MoreThanOrEqual } from 'typeorm';
 
 const router = Router();
 
@@ -126,6 +130,66 @@ router.delete('/users/:id', async (req: AuthRequest, res: Response): Promise<voi
     res.json({ success: true });
   } catch (error) {
     console.error('Admin delete user error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/admin/stats
+router.get('/stats', async (_req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const since30d = new Date();
+    since30d.setDate(since30d.getDate() - 30);
+
+    const userRepo    = AppDataSource.getRepository(User);
+    const jobRepo     = AppDataSource.getRepository(Job);
+    const invoiceRepo = AppDataSource.getRepository(Invoice);
+    const quoteRepo   = AppDataSource.getRepository(Quote);
+
+    // Run all queries in parallel
+    const [
+      allUsers,
+      newUsersLast30d,
+      allJobs,
+      activeJobs,
+      paidInvoices,
+      paidInvoicesLast30d,
+      quotesLast30d,
+    ] = await Promise.all([
+      userRepo.find(),
+      userRepo.count({ where: { createdAt: MoreThanOrEqual(since30d) } }),
+      jobRepo.count(),
+      jobRepo.count({ where: { status: JobStatus.ACTIVE } }),
+      invoiceRepo.find({ where: { status: InvoiceStatus.PAID } }),
+      invoiceRepo.find({ where: { status: InvoiceStatus.PAID, paidAt: MoreThanOrEqual(since30d) } }),
+      quoteRepo.count({ where: { createdAt: MoreThanOrEqual(since30d) } }),
+    ]);
+
+    // Separate customers from admins
+    const customers = allUsers.filter((u) => u.plan !== SubscriptionPlan.ADMIN);
+
+    // Plan breakdown (customers only)
+    const planCounts: Record<string, number> = {};
+    for (const plan of [SubscriptionPlan.STARTER, SubscriptionPlan.PROFESSIONAL, SubscriptionPlan.BUSINESS]) {
+      planCounts[plan] = customers.filter((u) => u.plan === plan).length;
+    }
+
+    // Revenue — invoices store amounts as integer cents
+    const totalRevenue = paidInvoices.reduce((sum, inv) => sum + Number(inv.totalGross), 0);
+    const revenueLast30d = paidInvoicesLast30d.reduce((sum, inv) => sum + Number(inv.totalGross), 0);
+
+    res.json({
+      totalCustomers: customers.length,
+      newCustomersLast30d: newUsersLast30d,
+      planBreakdown: planCounts,
+      totalJobs: allJobs,
+      activeJobs,
+      quotesLast30d,
+      totalPaidInvoices: paidInvoices.length,
+      totalRevenueCents: totalRevenue,
+      revenueLast30dCents: revenueLast30d,
+    });
+  } catch (error) {
+    console.error('Admin stats error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

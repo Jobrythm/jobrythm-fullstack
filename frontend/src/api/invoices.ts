@@ -14,7 +14,7 @@ export const getInvoice = async (id: string): Promise<Invoice> => {
 };
 
 export const createInvoice = async (jobId: string, payload: InvoicePayload): Promise<Invoice> => {
-  const { data } = await apiClient.post<Invoice>(`/jobs/${jobId}/invoices`, payload);
+  const { data } = await apiClient.post<Invoice>('/invoices', { jobId, ...payload });
   return data;
 };
 

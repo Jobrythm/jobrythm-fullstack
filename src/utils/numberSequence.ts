@@ -2,24 +2,27 @@ import { AppDataSource } from '../config/database.js';
 import { NumberSequence } from '../entities/NumberSequence.js';
 
 export async function getNextNumber(userId: string, prefix: string): Promise<string> {
-  const sequenceRepository = AppDataSource.getRepository(NumberSequence);
+  return AppDataSource.transaction(async (manager) => {
+    const sequenceRepository = manager.getRepository(NumberSequence);
 
-  // Find or create sequence
-  let sequence = await sequenceRepository.findOne({
-    where: { userId, prefix },
-  });
-
-  if (!sequence) {
-    sequence = sequenceRepository.create({
-      userId,
-      prefix,
-      lastNumber: 0,
+    // Lock the row for this user+prefix to prevent concurrent duplicates
+    let sequence = await sequenceRepository.findOne({
+      where: { userId, prefix },
+      lock: { mode: 'pessimistic_write' },
     });
-  }
 
-  sequence.lastNumber += 1;
-  await sequenceRepository.save(sequence);
+    if (!sequence) {
+      sequence = sequenceRepository.create({
+        userId,
+        prefix,
+        lastNumber: 0,
+      });
+    }
 
-  const paddedNumber = sequence.lastNumber.toString().padStart(4, '0');
-  return `${prefix}${paddedNumber}`;
+    sequence.lastNumber += 1;
+    await sequenceRepository.save(sequence);
+
+    const paddedNumber = sequence.lastNumber.toString().padStart(4, '0');
+    return `${prefix}${paddedNumber}`;
+  });
 }

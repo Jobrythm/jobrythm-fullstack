@@ -40,13 +40,23 @@ const titleMap: Record<string, string> = {
   admin: 'Admin Console',
 };
 
+const EXACT_MATCH_PATHS = new Set(['/dashboard', '/']);
+
+const isNavItemActive = (itemPath: string, currentPath: string): boolean => {
+  if (EXACT_MATCH_PATHS.has(itemPath)) {
+    return currentPath === itemPath || currentPath === '/' || currentPath === '/dashboard';
+  }
+  return currentPath.startsWith(itemPath);
+};
+
 export const AppLayout = () => {
   const [topbarAction, setTopbarAction] = useState<ReactNode>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, session, clearAuth } = useAuth();
-  const { data: activeJobsResponse } = useJobs({ status: 'active' });
+  const isAdmin = user?.plan === 'admin';
+  const { data: activeJobsResponse } = useJobs({ status: 'active' }, { enabled: !isAdmin });
   const activeJobs = activeJobsResponse?.items ?? [];
 
   const breadcrumb = useMemo(() => {
@@ -56,16 +66,22 @@ export const AppLayout = () => {
 
   const pageTitle = titleMap[breadcrumb[0]] ?? 'Jobrythm';
 
-  const navItems: SidebarItem[] = [
-    { to: '/dashboard', label: 'Dashboard', icon: IconLayoutDashboard },
-    { to: '/jobs', label: 'Jobs', icon: IconBriefcase, badge: activeJobs.length },
-    { to: '/clients', label: 'Clients', icon: IconUsers },
-    { to: '/quotes', label: 'Quotes', icon: IconFileText },
-    { to: '/invoices', label: 'Invoices', icon: IconReceipt },
-    { divider: true },
-    ...(user?.plan === 'admin' ? [{ to: '/admin', label: 'Admin', icon: IconShieldLock }] : []),
-    { to: '/settings', label: 'Settings', icon: IconSettings },
-  ];
+  const navItems: SidebarItem[] = isAdmin
+    ? [
+        { to: '/dashboard', label: 'Dashboard', icon: IconLayoutDashboard },
+        { divider: true },
+        { to: '/admin', label: 'Admin', icon: IconShieldLock },
+        { to: '/settings', label: 'Settings', icon: IconSettings },
+      ]
+    : [
+        { to: '/dashboard', label: 'Dashboard', icon: IconLayoutDashboard },
+        { to: '/jobs', label: 'Jobs', icon: IconBriefcase, badge: activeJobs.length },
+        { to: '/clients', label: 'Clients', icon: IconUsers },
+        { to: '/quotes', label: 'Quotes', icon: IconFileText },
+        { to: '/invoices', label: 'Invoices', icon: IconReceipt },
+        { divider: true },
+        { to: '/settings', label: 'Settings', icon: IconSettings },
+      ];
 
   return (
     <TopbarActionContext.Provider value={{ setTopbarAction }}>
@@ -86,7 +102,7 @@ export const AppLayout = () => {
                       <hr className="navbar-divider" />
                     </li>
                   ) : (
-                    <li key={item.to} className={cn('nav-item', location.pathname.startsWith(item.to) && 'active')}>
+                    <li key={item.to} className={cn('nav-item', isNavItemActive(item.to, location.pathname) && 'active')}>
                       <Link to={item.to} className="nav-link" onClick={() => setMobileOpen(false)}>
                         <span className="nav-link-icon d-md-none d-lg-inline-block">
                           <item.icon size={18} />

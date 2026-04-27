@@ -18,6 +18,8 @@ import quotesRoutes from './routes/quotes.js';
 import invoicesRoutes from './routes/invoices.js';
 import dashboardRoutes from './routes/dashboard.js';
 import adminRoutes from './routes/admin.js';
+import adminSettingsRoutes from './routes/adminSettings.js';
+import billingRoutes, { stripeWebhookHandler } from './routes/billing.js';
 import { User } from './entities/User.js';
 import { hashPassword } from './utils/auth.js';
 import { SubscriptionPlan } from './types/enums.js';
@@ -51,6 +53,9 @@ app.use(cors({
   origin: corsOrigins,
   credentials: true,
 }));
+
+// Stripe webhook — must come BEFORE express.json() so we get the raw body
+app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), stripeWebhookHandler);
 
 // Body parsing
 app.use(express.json());
@@ -87,6 +92,8 @@ app.use('/api/quotes', apiLimiter, quotesRoutes);
 app.use('/api/invoices', apiLimiter, invoicesRoutes);
 app.use('/api/dashboard', apiLimiter, dashboardRoutes);
 app.use('/api/admin', apiLimiter, adminRoutes);
+app.use('/api/admin/settings', apiLimiter, adminSettingsRoutes);
+app.use('/api/billing', apiLimiter, billingRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {
@@ -144,7 +151,8 @@ async function seedAdminUser() {
 
     if (!existingAdmin) {
       console.log('Creating default admin user...');
-      const passwordHash = await hashPassword('adminpassword');
+      const adminPassword = process.env.ADMIN_PASSWORD || 'adminpassword';
+      const passwordHash = await hashPassword(adminPassword);
 
       const admin = userRepository.create({
         email: adminEmail,
@@ -154,7 +162,11 @@ async function seedAdminUser() {
       });
 
       await userRepository.save(admin);
-      console.log(`Admin user created: ${adminEmail} / adminpassword`);
+      if (process.env.ADMIN_PASSWORD) {
+        console.log(`Admin user created: ${adminEmail}`);
+      } else {
+        console.log(`Admin user created: ${adminEmail} / adminpassword (set ADMIN_PASSWORD env var to override)`);
+      }
     } else {
       console.log('Admin user already exists');
     }

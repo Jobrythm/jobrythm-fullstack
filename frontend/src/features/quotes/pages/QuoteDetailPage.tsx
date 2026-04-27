@@ -7,9 +7,10 @@ import { useQuote } from '../hooks/useQuotes';
 
 export const QuoteDetailPage = () => {
   const { id } = useParams();
-  const { data: quote, isLoading } = useQuote(id);
+  const { data: quote, isLoading, isError } = useQuote(id);
 
-  if (isLoading || !quote) return <LoadingSpinner label="Loading quote..." />;
+  if (isLoading) return <LoadingSpinner label="Loading quote..." />;
+  if (isError || !quote) return <div className="alert alert-danger">Quote not found.</div>;
 
   return (
     <div className="card">

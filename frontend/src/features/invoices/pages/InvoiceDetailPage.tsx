@@ -7,9 +7,10 @@ import { useInvoice } from '../hooks/useInvoices';
 
 export const InvoiceDetailPage = () => {
   const { id } = useParams();
-  const { data: invoice, isLoading } = useInvoice(id);
+  const { data: invoice, isLoading, isError } = useInvoice(id);
 
-  if (isLoading || !invoice) return <LoadingSpinner label="Loading invoice..." />;
+  if (isLoading) return <LoadingSpinner label="Loading invoice..." />;
+  if (isError || !invoice) return <div className="alert alert-danger">Invoice not found.</div>;
 
   return (
     <div className="card">

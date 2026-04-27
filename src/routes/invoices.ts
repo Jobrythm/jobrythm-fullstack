@@ -93,6 +93,15 @@ router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
       return;
     }
 
+    const invoiceRepository = AppDataSource.getRepository(Invoice);
+
+    // Prevent duplicate invoices per job
+    const existingInvoice = await invoiceRepository.findOne({ where: { jobId: job.id } });
+    if (existingInvoice) {
+      res.status(409).json({ error: 'An invoice already exists for this job' });
+      return;
+    }
+
     const { notes, terms, dueDate } = req.body;
 
     // Calculate totals from line items
@@ -103,7 +112,6 @@ router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
     // Generate invoice number
     const invoiceNumber = await getNextNumber(req.user!.userId, 'INV');
 
-    const invoiceRepository = AppDataSource.getRepository(Invoice);
     const invoice = invoiceRepository.create({
       jobId: job.id,
       invoiceNumber,

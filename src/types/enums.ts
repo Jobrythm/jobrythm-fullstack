@@ -1,38 +1,38 @@
 export enum SubscriptionPlan {
   STARTER = 'starter',
-  PRO = 'pro',
-  TEAM = 'team',
+  PROFESSIONAL = 'professional',
+  BUSINESS = 'business',
   ADMIN = 'admin',
 }
 
 export enum JobStatus {
-  DRAFT = 'Draft',
-  QUOTED = 'Quoted',
-  ACTIVE = 'Active',
-  COMPLETED = 'Completed',
-  INVOICED = 'Invoiced',
+  DRAFT = 'draft',
+  QUOTED = 'quoted',
+  ACTIVE = 'active',
+  COMPLETED = 'completed',
+  INVOICED = 'invoiced',
 }
 
 export enum LineItemCategory {
-  LABOUR = 'Labour',
-  MATERIALS = 'Materials',
-  EQUIPMENT = 'Equipment',
-  SUBCONTRACTOR = 'Subcontractor',
-  OTHER = 'Other',
+  LABOUR = 'labour',
+  MATERIALS = 'materials',
+  EQUIPMENT = 'equipment',
+  SUBCONTRACTOR = 'subcontractor',
+  OTHER = 'other',
 }
 
 export enum QuoteStatus {
-  DRAFT = 'Draft',
-  SENT = 'Sent',
-  ACCEPTED = 'Accepted',
-  REJECTED = 'Rejected',
-  EXPIRED = 'Expired',
+  DRAFT = 'draft',
+  SENT = 'sent',
+  ACCEPTED = 'accepted',
+  REJECTED = 'rejected',
+  EXPIRED = 'expired',
 }
 
 export enum InvoiceStatus {
-  DRAFT = 'Draft',
-  SENT = 'Sent',
-  PAID = 'Paid',
-  OVERDUE = 'Overdue',
-  CANCELLED = 'Cancelled',
+  DRAFT = 'draft',
+  SENT = 'sent',
+  PAID = 'paid',
+  OVERDUE = 'overdue',
+  CANCELLED = 'cancelled',
 }

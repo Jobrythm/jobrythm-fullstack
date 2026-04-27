@@ -8,10 +8,11 @@ import type { JobsQuery, UpdateJobStatusRequest } from '../../../api/types';
 
 export const jobsQueryKey = ['jobs'] as const;
 
-export const useJobs = (filters?: JobsQuery) => {
+export const useJobs = (filters?: JobsQuery, options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: [...jobsQueryKey, filters],
     queryFn: () => getJobs(filters),
+    enabled: options?.enabled !== false,
   });
 };
 

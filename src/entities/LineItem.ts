@@ -41,4 +41,22 @@ export class LineItem extends BaseEntity {
   get marginPercent(): number {
     return this.totalPrice > 0 ? ((this.totalPrice - this.totalCost) / this.totalPrice) * 100 : 0;
   }
+
+  toJSON() {
+    return {
+      id: this.id,
+      jobId: this.jobId,
+      description: this.description,
+      category: this.category,
+      quantity: Number(this.quantity),
+      unit: this.unit,
+      unitCost: Number(this.unitCost),
+      unitPrice: Number(this.unitPrice),
+      totalCost: this.totalCost,
+      totalPrice: this.totalPrice,
+      marginPercent: this.marginPercent,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
+    };
+  }
 }

@@ -26,22 +26,20 @@ export function authenticateToken(req: AuthRequest, res: Response, next: NextFun
   }
 }
 
-export function requireAdmin(req: AuthRequest, res: Response, next: NextFunction): void {
+export async function requireAdmin(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   if (!req.user) {
     res.status(401).json({ error: 'Authentication required' });
     return;
   }
-  const userRepository = AppDataSource.getRepository(User);
-  userRepository
-    .findOne({ where: { id: req.user.userId } })
-    .then((user) => {
-      if (!user || user.plan !== SubscriptionPlan.ADMIN) {
-        res.status(403).json({ error: 'Admin access required' });
-        return;
-      }
-      next();
-    })
-    .catch(() => {
-      res.status(500).json({ error: 'Internal server error' });
-    });
+  try {
+    const userRepository = AppDataSource.getRepository(User);
+    const user = await userRepository.findOne({ where: { id: req.user.userId } });
+    if (!user || user.plan !== SubscriptionPlan.ADMIN) {
+      res.status(403).json({ error: 'Admin access required' });
+      return;
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CurrencyDisplay } from '../../../components/CurrencyDisplay';
+import { EmptyState } from '../../../components/EmptyState';
 import { TableSkeleton } from '../../../components/TableSkeleton';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { formatDate } from '../../../utils';
@@ -27,6 +28,8 @@ export const InvoicesPage = () => {
       </div>
       {isLoading ? (
         <TableSkeleton rows={6} columns={8} />
+      ) : invoices.length === 0 ? (
+        <EmptyState icon={null} title="No invoices yet" description="Invoices will appear here once you create them from a job." />
       ) : (
         <div className="table-responsive">
           <table className="table table-vcenter card-table">

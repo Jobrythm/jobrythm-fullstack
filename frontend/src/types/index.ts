@@ -3,8 +3,15 @@ export interface User {
   email: string;
   name: string;
   companyName?: string;
+  companyAddress?: string;
   logoUrl?: string;
-  plan: 'starter' | 'pro' | 'team' | 'admin';
+  defaultVatRate?: number;
+  defaultPaymentTerms?: string;
+  defaultQuoteValidityDays?: number;
+  plan: 'starter' | 'professional' | 'business' | 'admin';
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
+  subscriptionEndsAt?: string;
   createdAt: string;
 }
 
@@ -13,7 +20,7 @@ export interface AdminUser {
   email: string;
   fullName: string;
   companyName: string | null;
-  plan: 'starter' | 'pro' | 'team' | 'admin';
+  plan: 'starter' | 'professional' | 'business' | 'admin';
   createdAt: string;
 }
 
@@ -55,6 +62,8 @@ export interface Job {
   startDate?: string;
   endDate?: string;
   lineItems: LineItem[];
+  quote?: Quote | null;
+  invoice?: Invoice | null;
   totalCost: number;
   totalRevenue: number;
   marginPercent: number;
@@ -111,6 +120,41 @@ export interface DashboardStats {
   outstandingInvoices: number;
   recentJobs: Job[];
   recentActivity: ActivityItem[];
+}
+
+export interface AdminStats {
+  totalCustomers: number;
+  newCustomersLast30d: number;
+  planBreakdown: Record<string, number>;
+  totalJobs: number;
+  activeJobs: number;
+  quotesLast30d: number;
+  totalPaidInvoices: number;
+  totalRevenueCents: number;
+  revenueLast30dCents: number;
+}
+
+export interface AppSettings {
+  stripeApiKey: string;
+  stripeApiKeySet: boolean;
+  stripeWebhookSecret: string;
+  stripeWebhookSecretSet: boolean;
+  stripeStarterMonthlyPriceId: string;
+  stripeStarterAnnualPriceId: string;
+  stripeProfessionalMonthlyPriceId: string;
+  stripeProfessionalAnnualPriceId: string;
+  stripeBusinessMonthlyPriceId: string;
+  stripeBusinessAnnualPriceId: string;
+}
+
+export interface BillingStatus {
+  configured: boolean;
+  starterMonthly: boolean;
+  starterAnnual: boolean;
+  professionalMonthly: boolean;
+  professionalAnnual: boolean;
+  businessMonthly: boolean;
+  businessAnnual: boolean;
 }
 
 export interface AuthResponse {

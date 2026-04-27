@@ -84,6 +84,14 @@ router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
       return;
     }
 
+    // Prevent duplicate quotes per job
+    const quoteRepository = AppDataSource.getRepository(Quote);
+    const existing = await quoteRepository.findOne({ where: { jobId: job.id } });
+    if (existing) {
+      res.status(409).json({ error: 'A quote already exists for this job' });
+      return;
+    }
+
     // Get user settings
     const userRepository = AppDataSource.getRepository(User);
     const user = await userRepository.findOne({ where: { id: req.user!.userId } });
@@ -103,7 +111,6 @@ router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
     // Generate quote number
     const quoteNumber = await getNextNumber(req.user!.userId, 'QT');
 
-    const quoteRepository = AppDataSource.getRepository(Quote);
     const quote = quoteRepository.create({
       jobId: job.id,
       quoteNumber,

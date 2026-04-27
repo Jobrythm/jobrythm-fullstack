@@ -10,7 +10,9 @@ RUN npm ci
 # Copy frontend source
 COPY frontend/ ./
 
-# Build frontend
+# Build frontend with relative API path so it works on any hostname/IP
+ARG VITE_API_URL=/api
+ENV VITE_API_URL=${VITE_API_URL}
 RUN npm run build
 
 # Build stage - Backend

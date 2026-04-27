@@ -37,5 +37,7 @@ export const resolveApiBaseUrl = (): string => {
     return JOBRYTHM_API_BASE_URLS[2];
   }
 
-  return JOBRYTHM_API_BASE_URLS[2];
+  // Default: use a relative path so API calls always go to the same origin as
+  // the frontend (self-hosted Docker, dev via Vite proxy, any IP/hostname).
+  return '/api';
 };
