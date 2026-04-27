@@ -8,6 +8,7 @@ import {
   IconSettings,
   IconUsers,
   IconShieldLock,
+  IconCrown,
 } from '@tabler/icons-react';
 import { type ComponentType, type ReactNode, useMemo, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
@@ -29,6 +30,13 @@ type SidebarDividerItem = { divider: true };
 
 type SidebarItem = SidebarLinkItem | SidebarDividerItem;
 
+
+const planBadgeClass: Record<string, string> = {
+  starter: 'bg-secondary-lt text-secondary',
+  professional: 'bg-blue-lt text-blue',
+  business: 'bg-indigo-lt text-indigo',
+  admin: 'bg-red-lt text-red',
+};
 
 const titleMap: Record<string, string> = {
   dashboard: 'Dashboard',
@@ -118,6 +126,25 @@ export const AppLayout = () => {
               </ul>
 
               <div className="mt-auto p-3 border-top">
+                {/* Plan badge + upgrade nudge */}
+                {!isAdmin && (
+                  <div className="mb-2">
+                    <span className={`badge text-capitalize ${planBadgeClass[user?.plan ?? 'starter'] ?? 'bg-secondary-lt'}`}>
+                      {user?.plan ?? 'starter'} plan
+                    </span>
+                    {user?.plan === 'starter' && (
+                      <Link
+                        to="/settings?tab=billing"
+                        className="btn btn-sm btn-ghost-warning ms-2 py-0 px-1 lh-1"
+                        title="Upgrade plan"
+                        onClick={() => setMobileOpen(false)}
+                      >
+                        <IconCrown size={14} className="me-1" />
+                        Upgrade
+                      </Link>
+                    )}
+                  </div>
+                )}
                 <div className="d-flex align-items-center gap-2 mb-2">
                   <span className="avatar avatar-sm">{user?.name?.slice(0, 1) ?? 'U'}</span>
                   <div>

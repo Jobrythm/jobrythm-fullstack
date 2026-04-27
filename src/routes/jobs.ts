@@ -2,9 +2,12 @@ import { Router, Response } from 'express';
 import { AppDataSource } from '../config/database.js';
 import { Job } from '../entities/Job.js';
 import { LineItem } from '../entities/LineItem.js';
+import { User } from '../entities/User.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
-import { JobStatus } from '../types/enums.js';
-import { Like } from 'typeorm';
+import { JobStatus, SubscriptionPlan } from '../types/enums.js';
+import { Like, In } from 'typeorm';
+
+const STARTER_ACTIVE_JOB_LIMIT = 15;
 
 const router = Router();
 
@@ -82,6 +85,26 @@ router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
     }
 
     const jobRepository = AppDataSource.getRepository(Job);
+
+    // Enforce Starter plan limit: max 15 open (non-completed, non-invoiced) jobs
+    const userRepository = AppDataSource.getRepository(User);
+    const user = await userRepository.findOne({ where: { id: req.user!.userId } });
+    if (user?.plan === SubscriptionPlan.STARTER) {
+      const openCount = await jobRepository.count({
+        where: {
+          userId: req.user!.userId,
+          status: In([JobStatus.DRAFT, JobStatus.QUOTED, JobStatus.ACTIVE]),
+        },
+      });
+      if (openCount >= STARTER_ACTIVE_JOB_LIMIT) {
+        res.status(403).json({
+          error: `Starter plan allows up to ${STARTER_ACTIVE_JOB_LIMIT} active jobs. Upgrade your plan to create more.`,
+          code: 'PLAN_LIMIT_EXCEEDED',
+        });
+        return;
+      }
+    }
+
     const job = jobRepository.create({
       userId: req.user!.userId,
       clientId,

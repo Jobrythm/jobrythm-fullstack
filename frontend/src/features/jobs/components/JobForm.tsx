@@ -1,7 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import type { Client, Job } from '../../../types';
+import { ClientSearchSelect } from '../../../components/ClientSearchSelect';
 
 const jobSchema = z
   .object({
@@ -33,6 +34,7 @@ export const JobForm = ({ clients, initialJob, isSaving = false, onSubmit, onAdd
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<JobFormValues>({
     resolver: zodResolver(jobSchema),
@@ -59,14 +61,18 @@ export const JobForm = ({ clients, initialJob, isSaving = false, onSubmit, onAdd
 
         <div className="col-md-4">
           <label className="form-label">Client</label>
-          <select className="form-select" {...register('clientId')}>
-            <option value="">Select a client</option>
-            {clients.map((client) => (
-              <option key={client.id} value={client.id}>
-                {client.name}
-              </option>
-            ))}
-          </select>
+          <Controller
+            name="clientId"
+            control={control}
+            render={({ field }) => (
+              <ClientSearchSelect
+                clients={clients}
+                value={field.value}
+                onChange={field.onChange}
+                error={errors.clientId?.message}
+              />
+            )}
+          />
           {errors.clientId ? <small className="text-danger">{errors.clientId.message}</small> : null}
 
           <button className="btn btn-link px-0 mt-2" type="button" onClick={onAddClient}>
