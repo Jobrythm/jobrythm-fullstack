@@ -30,12 +30,12 @@ import {
   useUpdateAdminSettings,
 } from '../hooks/useAdminUsers';
 
-const PLANS: AdminUserPlan[] = ['starter', 'pro', 'team', 'admin'];
+const PLANS: AdminUserPlan[] = ['starter', 'professional', 'business', 'admin'];
 
 const planBadgeClass: Record<AdminUserPlan, string> = {
   starter: 'bg-secondary-lt',
-  pro: 'bg-blue-lt',
-  team: 'bg-indigo-lt',
+  professional: 'bg-blue-lt',
+  business: 'bg-indigo-lt',
   admin: 'bg-red-lt',
 };
 
@@ -44,20 +44,24 @@ const createSchema = z.object({
   email: z.string().email('Invalid email'),
   password: z.string().min(8, 'Minimum 8 characters'),
   companyName: z.string().optional(),
-  plan: z.enum(['starter', 'pro', 'team', 'admin']),
+  plan: z.enum(['starter', 'professional', 'business', 'admin']),
 });
 
 const editSchema = z.object({
   fullName: z.string().min(1, 'Required'),
   companyName: z.string().optional(),
-  plan: z.enum(['starter', 'pro', 'team', 'admin']),
+  plan: z.enum(['starter', 'professional', 'business', 'admin']),
 });
 
 const stripeSettingsSchema = z.object({
   stripeApiKey: z.string().optional(),
   stripeWebhookSecret: z.string().optional(),
-  stripeProPriceId: z.string().optional(),
-  stripeTeamPriceId: z.string().optional(),
+  stripeStarterMonthlyPriceId: z.string().optional(),
+  stripeStarterAnnualPriceId: z.string().optional(),
+  stripeProfessionalMonthlyPriceId: z.string().optional(),
+  stripeProfessionalAnnualPriceId: z.string().optional(),
+  stripeBusinessMonthlyPriceId: z.string().optional(),
+  stripeBusinessAnnualPriceId: z.string().optional(),
 });
 
 type CreateValues = z.infer<typeof createSchema>;
@@ -223,19 +227,26 @@ const StripeSettingsPanel = () => {
     defaultValues: {
       stripeApiKey: '',
       stripeWebhookSecret: '',
-      stripeProPriceId: '',
-      stripeTeamPriceId: '',
+      stripeStarterMonthlyPriceId: '',
+      stripeStarterAnnualPriceId: '',
+      stripeProfessionalMonthlyPriceId: '',
+      stripeProfessionalAnnualPriceId: '',
+      stripeBusinessMonthlyPriceId: '',
+      stripeBusinessAnnualPriceId: '',
     },
   });
 
-  // Pre-populate price IDs (not secrets) once settings load
   useEffect(() => {
     if (settings) {
       form.reset({
         stripeApiKey: '',
         stripeWebhookSecret: '',
-        stripeProPriceId: settings.stripeProPriceId ?? '',
-        stripeTeamPriceId: settings.stripeTeamPriceId ?? '',
+        stripeStarterMonthlyPriceId: settings.stripeStarterMonthlyPriceId ?? '',
+        stripeStarterAnnualPriceId: settings.stripeStarterAnnualPriceId ?? '',
+        stripeProfessionalMonthlyPriceId: settings.stripeProfessionalMonthlyPriceId ?? '',
+        stripeProfessionalAnnualPriceId: settings.stripeProfessionalAnnualPriceId ?? '',
+        stripeBusinessMonthlyPriceId: settings.stripeBusinessMonthlyPriceId ?? '',
+        stripeBusinessAnnualPriceId: settings.stripeBusinessAnnualPriceId ?? '',
       });
     }
   }, [settings, form]);
@@ -244,8 +255,12 @@ const StripeSettingsPanel = () => {
     const payload: Record<string, string> = {};
     if (values.stripeApiKey?.trim()) payload.stripeApiKey = values.stripeApiKey.trim();
     if (values.stripeWebhookSecret?.trim()) payload.stripeWebhookSecret = values.stripeWebhookSecret.trim();
-    if (values.stripeProPriceId !== undefined) payload.stripeProPriceId = values.stripeProPriceId?.trim() ?? '';
-    if (values.stripeTeamPriceId !== undefined) payload.stripeTeamPriceId = values.stripeTeamPriceId?.trim() ?? '';
+    if (values.stripeStarterMonthlyPriceId !== undefined) payload.stripeStarterMonthlyPriceId = values.stripeStarterMonthlyPriceId?.trim() ?? '';
+    if (values.stripeStarterAnnualPriceId !== undefined) payload.stripeStarterAnnualPriceId = values.stripeStarterAnnualPriceId?.trim() ?? '';
+    if (values.stripeProfessionalMonthlyPriceId !== undefined) payload.stripeProfessionalMonthlyPriceId = values.stripeProfessionalMonthlyPriceId?.trim() ?? '';
+    if (values.stripeProfessionalAnnualPriceId !== undefined) payload.stripeProfessionalAnnualPriceId = values.stripeProfessionalAnnualPriceId?.trim() ?? '';
+    if (values.stripeBusinessMonthlyPriceId !== undefined) payload.stripeBusinessMonthlyPriceId = values.stripeBusinessMonthlyPriceId?.trim() ?? '';
+    if (values.stripeBusinessAnnualPriceId !== undefined) payload.stripeBusinessAnnualPriceId = values.stripeBusinessAnnualPriceId?.trim() ?? '';
 
     updateSettings.mutate(payload, {
       onSuccess: () => {
@@ -258,6 +273,17 @@ const StripeSettingsPanel = () => {
 
   if (isLoading) return <div className="text-secondary py-3">Loading settings…</div>;
 
+  const statusItems = [
+    { label: 'API Key', set: settings?.stripeApiKeySet, value: settings?.stripeApiKey },
+    { label: 'Webhook Secret', set: settings?.stripeWebhookSecretSet, value: settings?.stripeWebhookSecret },
+    { label: 'Starter Monthly', set: Boolean(settings?.stripeStarterMonthlyPriceId), value: settings?.stripeStarterMonthlyPriceId },
+    { label: 'Starter Annual', set: Boolean(settings?.stripeStarterAnnualPriceId), value: settings?.stripeStarterAnnualPriceId },
+    { label: 'Professional Monthly', set: Boolean(settings?.stripeProfessionalMonthlyPriceId), value: settings?.stripeProfessionalMonthlyPriceId },
+    { label: 'Professional Annual', set: Boolean(settings?.stripeProfessionalAnnualPriceId), value: settings?.stripeProfessionalAnnualPriceId },
+    { label: 'Business Monthly', set: Boolean(settings?.stripeBusinessMonthlyPriceId), value: settings?.stripeBusinessMonthlyPriceId },
+    { label: 'Business Annual', set: Boolean(settings?.stripeBusinessAnnualPriceId), value: settings?.stripeBusinessAnnualPriceId },
+  ];
+
   return (
     <div className="row g-4">
       {/* Setup guide */}
@@ -266,32 +292,27 @@ const StripeSettingsPanel = () => {
           <div className="d-flex gap-2 align-items-start">
             <IconAlertCircle size={18} className="mt-1 flex-shrink-0" />
             <div>
-              <h4 className="alert-heading h6 mb-2">What to create in your Stripe Dashboard</h4>
+              <h4 className="alert-heading h6 mb-2">What to configure in your Stripe Dashboard</h4>
               <ol className="mb-2 ps-3 small">
-                <li>Go to <strong>Products</strong> and create a product called <strong>"Jobrythm Pro"</strong> with a recurring monthly price. Copy the <strong>Price ID</strong> (starts with <code>price_</code>) into the Pro Price ID field below.</li>
-                <li>Optionally create a second product called <strong>"Jobrythm Team"</strong> the same way and paste its Price ID into the Team Price ID field.</li>
-                <li>Go to <strong>Developers → Webhooks</strong>, click <strong>Add endpoint</strong>, and enter: <code>{window.location.origin}/api/billing/webhook</code></li>
-                <li>Under <em>Events to listen for</em>, select: <code>checkout.session.completed</code>, <code>customer.subscription.updated</code>, <code>customer.subscription.deleted</code></li>
-                <li>After creating the webhook, reveal the <strong>Signing Secret</strong> (starts with <code>whsec_</code>) and paste it below.</li>
-                <li>Go to <strong>Developers → API keys</strong>, copy your <strong>Secret key</strong> (starts with <code>sk_</code>) and paste it below.</li>
-                <li>Enable the <strong>Customer Portal</strong> at <em>Billing → Customer portal</em> in your Stripe Dashboard.</li>
+                <li>For each of your 3 products (<strong>Starter</strong>, <strong>Professional</strong>, <strong>Business</strong>), add <strong>two prices</strong>: one monthly, one annual. Copy each <strong>Price ID</strong> (starts with <code>price_</code>) below.</li>
+                <li>The products already exist: <code>prod_UPX393kv3F2yh5</code> (Starter), <code>prod_UPX4C6Nne6bwPo</code> (Professional), <code>prod_UPX4oXqZn9sVuS</code> (Business).</li>
+                <li>Go to <strong>Developers → Webhooks</strong> → <strong>Add endpoint</strong>: <code>{window.location.origin}/api/billing/webhook</code></li>
+                <li>Select events: <code>checkout.session.completed</code>, <code>customer.subscription.updated</code>, <code>customer.subscription.deleted</code></li>
+                <li>Reveal the <strong>Signing Secret</strong> (<code>whsec_…</code>) and paste it below.</li>
+                <li>Go to <strong>Developers → API keys</strong>, copy your <strong>Secret key</strong> (<code>sk_…</code>) and paste it below.</li>
+                <li>Enable the <strong>Customer Portal</strong> at <em>Billing → Customer portal</em>.</li>
               </ol>
-              <p className="mb-0 small text-secondary">Use <code>sk_test_</code> keys and <code>whsec_test_</code> secrets during development. Switch to <code>sk_live_</code> in production.</p>
+              <p className="mb-0 small text-secondary">Use <code>sk_test_</code> / <code>whsec_test_</code> during development. Switch to <code>sk_live_</code> in production.</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Current status */}
+      {/* Status cards */}
       <div className="col-12">
         <div className="row g-2">
-          {[
-            { label: 'Stripe API Key', set: settings?.stripeApiKeySet, value: settings?.stripeApiKey },
-            { label: 'Webhook Secret', set: settings?.stripeWebhookSecretSet, value: settings?.stripeWebhookSecret },
-            { label: 'Pro Price ID', set: settings?.stripeProPriceIdSet, value: settings?.stripeProPriceId },
-            { label: 'Team Price ID', set: settings?.stripeTeamPriceIdSet, value: settings?.stripeTeamPriceId },
-          ].map(({ label, set, value }) => (
-            <div key={label} className="col-sm-6 col-md-3">
+          {statusItems.map(({ label, set, value }) => (
+            <div key={label} className="col-6 col-md-3">
               <div className={`card card-sm ${set ? 'border-success' : 'border-warning'}`}>
                 <div className="card-body py-2 px-3">
                   <div className="d-flex align-items-center gap-2">
@@ -325,6 +346,7 @@ const StripeSettingsPanel = () => {
           <div className="card-body">
             <form onSubmit={form.handleSubmit(onSubmit)}>
               <div className="row g-3">
+                {/* Secrets */}
                 <div className="col-md-6">
                   <label className="form-label">
                     Stripe Secret Key
@@ -337,12 +359,7 @@ const StripeSettingsPanel = () => {
                       placeholder={settings?.stripeApiKeySet ? 'Enter new key to replace' : 'sk_live_... or sk_test_...'}
                       {...form.register('stripeApiKey')}
                     />
-                    <button
-                      type="button"
-                      className="btn btn-outline-secondary"
-                      onClick={() => setShowKey((v) => !v)}
-                      title={showKey ? 'Hide' : 'Show'}
-                    >
+                    <button type="button" className="btn btn-outline-secondary" onClick={() => setShowKey((v) => !v)}>
                       {showKey ? <IconEyeOff size={14} /> : <IconEye size={14} />}
                     </button>
                   </div>
@@ -360,36 +377,41 @@ const StripeSettingsPanel = () => {
                       placeholder={settings?.stripeWebhookSecretSet ? 'Enter new secret to replace' : 'whsec_...'}
                       {...form.register('stripeWebhookSecret')}
                     />
-                    <button
-                      type="button"
-                      className="btn btn-outline-secondary"
-                      onClick={() => setShowWebhookSecret((v) => !v)}
-                      title={showWebhookSecret ? 'Hide' : 'Show'}
-                    >
+                    <button type="button" className="btn btn-outline-secondary" onClick={() => setShowWebhookSecret((v) => !v)}>
                       {showWebhookSecret ? <IconEyeOff size={14} /> : <IconEye size={14} />}
                     </button>
                   </div>
                 </div>
 
+                {/* Price IDs — grouped by plan */}
+                <div className="col-12"><hr className="my-1" /><p className="text-secondary small mb-0 fw-semibold">Starter — $14/mo · $9/mo billed annually</p></div>
                 <div className="col-md-6">
-                  <label className="form-label">Pro Plan Price ID</label>
-                  <input
-                    className="form-control font-monospace"
-                    placeholder="price_..."
-                    {...form.register('stripeProPriceId')}
-                  />
+                  <label className="form-label">Starter Monthly Price ID</label>
+                  <input className="form-control font-monospace" placeholder="price_..." {...form.register('stripeStarterMonthlyPriceId')} />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label">Starter Annual Price ID</label>
+                  <input className="form-control font-monospace" placeholder="price_..." {...form.register('stripeStarterAnnualPriceId')} />
                 </div>
 
+                <div className="col-12"><hr className="my-1" /><p className="text-secondary small mb-0 fw-semibold">Professional — $29/mo · $24/mo billed annually</p></div>
                 <div className="col-md-6">
-                  <label className="form-label">
-                    Team Plan Price ID
-                    <span className="text-secondary ms-1 small">(optional)</span>
-                  </label>
-                  <input
-                    className="form-control font-monospace"
-                    placeholder="price_..."
-                    {...form.register('stripeTeamPriceId')}
-                  />
+                  <label className="form-label">Professional Monthly Price ID</label>
+                  <input className="form-control font-monospace" placeholder="price_..." {...form.register('stripeProfessionalMonthlyPriceId')} />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label">Professional Annual Price ID</label>
+                  <input className="form-control font-monospace" placeholder="price_..." {...form.register('stripeProfessionalAnnualPriceId')} />
+                </div>
+
+                <div className="col-12"><hr className="my-1" /><p className="text-secondary small mb-0 fw-semibold">Business — $59/mo · $49/mo billed annually</p></div>
+                <div className="col-md-6">
+                  <label className="form-label">Business Monthly Price ID</label>
+                  <input className="form-control font-monospace" placeholder="price_..." {...form.register('stripeBusinessMonthlyPriceId')} />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label">Business Annual Price ID</label>
+                  <input className="form-control font-monospace" placeholder="price_..." {...form.register('stripeBusinessAnnualPriceId')} />
                 </div>
 
                 <div className="col-12">

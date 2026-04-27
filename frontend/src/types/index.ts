@@ -4,7 +4,7 @@ export interface User {
   name: string;
   companyName?: string;
   logoUrl?: string;
-  plan: 'starter' | 'pro' | 'team' | 'admin';
+  plan: 'starter' | 'professional' | 'business' | 'admin';
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   subscriptionEndsAt?: string;
@@ -16,7 +16,7 @@ export interface AdminUser {
   email: string;
   fullName: string;
   companyName: string | null;
-  plan: 'starter' | 'pro' | 'team' | 'admin';
+  plan: 'starter' | 'professional' | 'business' | 'admin';
   createdAt: string;
 }
 
@@ -121,16 +121,22 @@ export interface AppSettings {
   stripeApiKeySet: boolean;
   stripeWebhookSecret: string;
   stripeWebhookSecretSet: boolean;
-  stripeProPriceId: string;
-  stripeProPriceIdSet: boolean;
-  stripeTeamPriceId: string;
-  stripeTeamPriceIdSet: boolean;
+  stripeStarterMonthlyPriceId: string;
+  stripeStarterAnnualPriceId: string;
+  stripeProfessionalMonthlyPriceId: string;
+  stripeProfessionalAnnualPriceId: string;
+  stripeBusinessMonthlyPriceId: string;
+  stripeBusinessAnnualPriceId: string;
 }
 
 export interface BillingStatus {
   configured: boolean;
-  hasProPlan: boolean;
-  hasTeamPlan: boolean;
+  starterMonthly: boolean;
+  starterAnnual: boolean;
+  professionalMonthly: boolean;
+  professionalAnnual: boolean;
+  businessMonthly: boolean;
+  businessAnnual: boolean;
 }
 
 export interface AuthResponse {

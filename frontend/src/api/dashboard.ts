@@ -41,8 +41,11 @@ export const getBillingStatus = async (): Promise<BillingStatus> => {
   return data;
 };
 
-export const createCheckoutSession = async (planTier: 'pro' | 'team' = 'pro'): Promise<BillingRedirectResponse> => {
-  const { data } = await apiClient.post<BillingRedirectResponse>('/billing/checkout', { planTier });
+export const createCheckoutSession = async (
+  planTier: 'starter' | 'professional' | 'business' = 'professional',
+  billingPeriod: 'monthly' | 'annual' = 'monthly',
+): Promise<BillingRedirectResponse> => {
+  const { data } = await apiClient.post<BillingRedirectResponse>('/billing/checkout', { planTier, billingPeriod });
   return data;
 };
 

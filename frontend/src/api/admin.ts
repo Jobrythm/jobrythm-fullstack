@@ -18,8 +18,12 @@ export interface UpdateUserPayload {
 export interface UpdateSettingsPayload {
   stripeApiKey?: string;
   stripeWebhookSecret?: string;
-  stripeProPriceId?: string;
-  stripeTeamPriceId?: string;
+  stripeStarterMonthlyPriceId?: string;
+  stripeStarterAnnualPriceId?: string;
+  stripeProfessionalMonthlyPriceId?: string;
+  stripeProfessionalAnnualPriceId?: string;
+  stripeBusinessMonthlyPriceId?: string;
+  stripeBusinessAnnualPriceId?: string;
 }
 
 export const adminGetUsers = async (): Promise<AdminUser[]> => {

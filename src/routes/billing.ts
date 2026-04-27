@@ -11,14 +11,37 @@ const router = Router();
 const resolveReturnBase = (): string =>
   (process.env.APP_URL ?? 'http://localhost:8080').replace(/\/$/, '');
 
+type PlanTier = 'starter' | 'professional' | 'business';
+type BillingPeriod = 'monthly' | 'annual';
+
 function planFromPriceId(
   priceId: string,
-  proPriceId: string | null,
-  teamPriceId: string | null,
+  config: Awaited<ReturnType<typeof getStripeConfig>>,
 ): SubscriptionPlan {
-  if (teamPriceId && priceId === teamPriceId) return SubscriptionPlan.TEAM;
-  if (proPriceId && priceId === proPriceId) return SubscriptionPlan.PRO;
-  return SubscriptionPlan.PRO;
+  if (priceId === config.businessMonthlyPriceId || priceId === config.businessAnnualPriceId) {
+    return SubscriptionPlan.BUSINESS;
+  }
+  if (priceId === config.professionalMonthlyPriceId || priceId === config.professionalAnnualPriceId) {
+    return SubscriptionPlan.PROFESSIONAL;
+  }
+  if (priceId === config.starterMonthlyPriceId || priceId === config.starterAnnualPriceId) {
+    return SubscriptionPlan.STARTER;
+  }
+  return SubscriptionPlan.PROFESSIONAL;
+}
+
+function resolvePriceId(
+  planTier: PlanTier,
+  billingPeriod: BillingPeriod,
+  config: Awaited<ReturnType<typeof getStripeConfig>>,
+): string | null {
+  if (planTier === 'starter') {
+    return billingPeriod === 'annual' ? config.starterAnnualPriceId : config.starterMonthlyPriceId;
+  }
+  if (planTier === 'professional') {
+    return billingPeriod === 'annual' ? config.professionalAnnualPriceId : config.professionalMonthlyPriceId;
+  }
+  return billingPeriod === 'annual' ? config.businessAnnualPriceId : config.businessMonthlyPriceId;
 }
 
 // ── Webhook (raw body — registered separately in server.ts) ───────────────────
@@ -58,15 +81,12 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
         const user = await userRepo.findOne({ where: { email } });
         if (!user) break;
 
-        // Determine plan from the subscription's price
-        let newPlan = SubscriptionPlan.PRO;
+        let newPlan = SubscriptionPlan.PROFESSIONAL;
         if (subscriptionId) {
           const sub = await stripe.subscriptions.retrieve(subscriptionId, { expand: ['items.data.price'] });
           const priceId = (sub.items.data[0]?.price as Stripe.Price)?.id;
-          if (priceId) newPlan = planFromPriceId(priceId, config.proPriceId, config.teamPriceId);
-
-          const currentPeriodEnd = sub.current_period_end;
-          user.subscriptionEndsAt = new Date(currentPeriodEnd * 1000);
+          if (priceId) newPlan = planFromPriceId(priceId, config);
+          user.subscriptionEndsAt = new Date(sub.current_period_end * 1000);
           user.stripeSubscriptionId = subscriptionId;
         }
 
@@ -83,11 +103,10 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
         const user = await userRepo.findOne({ where: { stripeCustomerId: customerId } });
         if (!user) break;
 
-        // Retrieve subscription with expanded price to get the price ID
         const expandedSub = await stripe.subscriptions.retrieve(sub.id, { expand: ['items.data.price'] });
         const priceId = (expandedSub.items.data[0]?.price as Stripe.Price)?.id;
         if (priceId) {
-          user.plan = planFromPriceId(priceId, config.proPriceId, config.teamPriceId);
+          user.plan = planFromPriceId(priceId, config);
         }
         user.subscriptionEndsAt = new Date(expandedSub.current_period_end * 1000);
         await userRepo.save(user);
@@ -122,7 +141,7 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
 router.use(authenticateToken);
 
 // POST /api/billing/checkout
-// Body: { planTier: 'pro' | 'team' }
+// Body: { planTier: 'starter' | 'professional' | 'business', billingPeriod: 'monthly' | 'annual' }
 router.post('/checkout', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const config = await getStripeConfig();
@@ -133,11 +152,12 @@ router.post('/checkout', async (req: AuthRequest, res: Response): Promise<void> 
       return;
     }
 
-    const planTier: string = req.body?.planTier ?? 'pro';
-    const priceId = planTier === 'team' ? config.teamPriceId : config.proPriceId;
+    const planTier: PlanTier = req.body?.planTier ?? 'professional';
+    const billingPeriod: BillingPeriod = req.body?.billingPeriod === 'annual' ? 'annual' : 'monthly';
+    const priceId = resolvePriceId(planTier, billingPeriod, config);
 
     if (!priceId) {
-      res.status(503).json({ message: 'Billing plan not configured. Contact your administrator.' });
+      res.status(503).json({ message: 'That billing plan is not configured yet. Contact your administrator.' });
       return;
     }
 
@@ -149,7 +169,7 @@ router.post('/checkout', async (req: AuthRequest, res: Response): Promise<void> 
       success_url: `${base}/settings?tab=billing&status=success`,
       cancel_url: `${base}/settings?tab=billing`,
       customer_email: req.user?.email,
-      metadata: { userId: req.user?.userId ?? '' },
+      metadata: { userId: req.user?.userId ?? '', planTier, billingPeriod },
     });
 
     res.json({ url: session.url });
@@ -175,7 +195,6 @@ router.post('/portal', async (req: AuthRequest, res: Response): Promise<void> =>
       return;
     }
 
-    // Find the Stripe customer by stripeCustomerId or email
     const userRepo = AppDataSource.getRepository(User);
     const user = await userRepo.findOne({ where: { id: req.user.userId } });
 
@@ -203,15 +222,18 @@ router.post('/portal', async (req: AuthRequest, res: Response): Promise<void> =>
   }
 });
 
-// GET /api/billing/status — returns whether billing is configured
+// GET /api/billing/status
 router.get('/status', async (_req: AuthRequest, res: Response): Promise<void> => {
   const config = await getStripeConfig();
   res.json({
     configured: Boolean(config.apiKey),
-    hasProPlan: Boolean(config.proPriceId),
-    hasTeamPlan: Boolean(config.teamPriceId),
+    starterMonthly: Boolean(config.starterMonthlyPriceId),
+    starterAnnual: Boolean(config.starterAnnualPriceId),
+    professionalMonthly: Boolean(config.professionalMonthlyPriceId),
+    professionalAnnual: Boolean(config.professionalAnnualPriceId),
+    businessMonthly: Boolean(config.businessMonthlyPriceId),
+    businessAnnual: Boolean(config.businessAnnualPriceId),
   });
 });
 
 export default router;
-

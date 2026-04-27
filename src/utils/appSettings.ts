@@ -21,24 +21,47 @@ export async function setSetting(key: string, value: string | null): Promise<voi
   await repo.save(setting);
 }
 
-export async function getStripeConfig(): Promise<{
+export interface StripeConfig {
   apiKey: string | null;
   webhookSecret: string | null;
-  proPriceId: string | null;
-  teamPriceId: string | null;
-}> {
-  const [apiKey, webhookSecret, proPriceId, teamPriceId] = await Promise.all([
+  starterMonthlyPriceId: string | null;
+  starterAnnualPriceId: string | null;
+  professionalMonthlyPriceId: string | null;
+  professionalAnnualPriceId: string | null;
+  businessMonthlyPriceId: string | null;
+  businessAnnualPriceId: string | null;
+}
+
+export async function getStripeConfig(): Promise<StripeConfig> {
+  const [
+    apiKey,
+    webhookSecret,
+    starterMonthlyPriceId,
+    starterAnnualPriceId,
+    professionalMonthlyPriceId,
+    professionalAnnualPriceId,
+    businessMonthlyPriceId,
+    businessAnnualPriceId,
+  ] = await Promise.all([
     getSetting('stripe_api_key'),
     getSetting('stripe_webhook_secret'),
-    getSetting('stripe_pro_price_id'),
-    getSetting('stripe_team_price_id'),
+    getSetting('stripe_starter_monthly_price_id'),
+    getSetting('stripe_starter_annual_price_id'),
+    getSetting('stripe_professional_monthly_price_id'),
+    getSetting('stripe_professional_annual_price_id'),
+    getSetting('stripe_business_monthly_price_id'),
+    getSetting('stripe_business_annual_price_id'),
   ]);
 
   return {
     apiKey: apiKey ?? process.env.STRIPE_API_KEY ?? null,
     webhookSecret: webhookSecret ?? process.env.STRIPE_WEBHOOK_SECRET ?? null,
-    proPriceId: proPriceId ?? process.env.STRIPE_PRO_PRICE_ID ?? null,
-    teamPriceId: teamPriceId ?? process.env.STRIPE_TEAM_PRICE_ID ?? null,
+    starterMonthlyPriceId:      starterMonthlyPriceId      ?? process.env.STRIPE_STARTER_MONTHLY_PRICE_ID      ?? 'price_1TQhzWIvlX8po9UrYjYdr0aV',
+    starterAnnualPriceId:       starterAnnualPriceId       ?? process.env.STRIPE_STARTER_ANNUAL_PRICE_ID       ?? 'price_1TQi90IvlX8po9UrLbUmbW0v',
+    professionalMonthlyPriceId: professionalMonthlyPriceId ?? process.env.STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID ?? 'price_1TQhzyIvlX8po9UrYYoF3hRj',
+    professionalAnnualPriceId:  professionalAnnualPriceId  ?? process.env.STRIPE_PROFESSIONAL_ANNUAL_PRICE_ID  ?? 'price_1TQiA8IvlX8po9Urs2e8IPV9',
+    businessMonthlyPriceId:     businessMonthlyPriceId     ?? process.env.STRIPE_BUSINESS_MONTHLY_PRICE_ID     ?? 'price_1TQi0HIvlX8po9UrVSzLreFG',
+    businessAnnualPriceId:      businessAnnualPriceId      ?? process.env.STRIPE_BUSINESS_ANNUAL_PRICE_ID      ?? 'price_1TQiArIvlX8po9UrZmYbnmt2',
   };
 }
 
