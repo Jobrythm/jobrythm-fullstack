@@ -19,7 +19,6 @@ const companySchema = z.object({
   companyName: z.string().min(1, 'Required'),
   address: z.string().optional(),
   defaultVatRate: z.coerce.number().min(0).max(100),
-  defaultPaymentTerms: z.string().optional(),
   defaultQuoteValidityDays: z.coerce.number().min(1),
 });
 
@@ -48,7 +47,6 @@ export const SettingsPage = () => {
       companyName: user?.companyName ?? '',
       address: '',
       defaultVatRate: 20,
-      defaultPaymentTerms: 'Payment due in 14 days.',
       defaultQuoteValidityDays: 14,
     },
   });
@@ -165,7 +163,6 @@ export const SettingsPage = () => {
                 companyName: values.companyName,
                 address: values.address ?? null,
                 defaultVatRate: values.defaultVatRate,
-                defaultPaymentTerms: values.defaultPaymentTerms || null,
                 defaultQuoteValidityDays: values.defaultQuoteValidityDays,
               });
             })}
@@ -195,10 +192,6 @@ export const SettingsPage = () => {
             <div className="col-md-3">
               <label className="form-label">Quote validity days</label>
               <input className="form-control" type="number" {...companyForm.register('defaultQuoteValidityDays')} />
-            </div>
-            <div className="col-12">
-              <label className="form-label">Default payment terms</label>
-              <textarea className="form-control" rows={3} {...companyForm.register('defaultPaymentTerms')} />
             </div>
             <div className="col-12"><button className="btn btn-primary">Save company settings</button></div>
           </form>

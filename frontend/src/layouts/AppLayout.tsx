@@ -46,7 +46,8 @@ export const AppLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, session, clearAuth } = useAuth();
-  const { data: activeJobsResponse } = useJobs({ status: 'active' });
+  const isAdmin = user?.plan === 'admin';
+  const { data: activeJobsResponse } = useJobs({ status: 'active' }, { enabled: !isAdmin });
   const activeJobs = activeJobsResponse?.items ?? [];
 
   const breadcrumb = useMemo(() => {
@@ -56,16 +57,22 @@ export const AppLayout = () => {
 
   const pageTitle = titleMap[breadcrumb[0]] ?? 'Jobrythm';
 
-  const navItems: SidebarItem[] = [
-    { to: '/dashboard', label: 'Dashboard', icon: IconLayoutDashboard },
-    { to: '/jobs', label: 'Jobs', icon: IconBriefcase, badge: activeJobs.length },
-    { to: '/clients', label: 'Clients', icon: IconUsers },
-    { to: '/quotes', label: 'Quotes', icon: IconFileText },
-    { to: '/invoices', label: 'Invoices', icon: IconReceipt },
-    { divider: true },
-    ...(user?.plan === 'admin' ? [{ to: '/admin', label: 'Admin', icon: IconShieldLock }] : []),
-    { to: '/settings', label: 'Settings', icon: IconSettings },
-  ];
+  const navItems: SidebarItem[] = isAdmin
+    ? [
+        { to: '/dashboard', label: 'Dashboard', icon: IconLayoutDashboard },
+        { divider: true },
+        { to: '/admin', label: 'Admin', icon: IconShieldLock },
+        { to: '/settings', label: 'Settings', icon: IconSettings },
+      ]
+    : [
+        { to: '/dashboard', label: 'Dashboard', icon: IconLayoutDashboard },
+        { to: '/jobs', label: 'Jobs', icon: IconBriefcase, badge: activeJobs.length },
+        { to: '/clients', label: 'Clients', icon: IconUsers },
+        { to: '/quotes', label: 'Quotes', icon: IconFileText },
+        { to: '/invoices', label: 'Invoices', icon: IconReceipt },
+        { divider: true },
+        { to: '/settings', label: 'Settings', icon: IconSettings },
+      ];
 
   return (
     <TopbarActionContext.Provider value={{ setTopbarAction }}>

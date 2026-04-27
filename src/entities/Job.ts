@@ -62,4 +62,27 @@ export class Job extends BaseEntity {
   get marginPercent(): number {
     return this.totalRevenue > 0 ? (this.marginAmount / this.totalRevenue) * 100 : 0;
   }
+
+  toJSON() {
+    return {
+      id: this.id,
+      userId: this.userId,
+      clientId: this.clientId,
+      title: this.title,
+      description: this.description,
+      status: this.status,
+      startDate: this.startDate,
+      endDate: this.endDate,
+      client: this.client,
+      lineItems: this.lineItems,
+      quote: this.quote,
+      invoice: this.invoice,
+      totalCost: this.totalCost,
+      totalRevenue: this.totalRevenue,
+      marginAmount: this.marginAmount,
+      marginPercent: this.marginPercent,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
+    };
+  }
 }
