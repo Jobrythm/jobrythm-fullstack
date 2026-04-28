@@ -8,12 +8,15 @@ import {
   adminTestEmail,
   adminUpdateSettings,
   adminUpdateUser,
+  adminGetAiLogs,
+  adminClearAiLogs,
 } from '../../../api/admin';
 import type { CreateUserPayload, UpdateSettingsPayload, UpdateUserPayload } from '../../../api/admin';
 
 export const adminUsersQueryKey    = ['admin', 'users']    as const;
 export const adminSettingsQueryKey = ['admin', 'settings'] as const;
 export const adminStatsQueryKey    = ['admin', 'stats']    as const;
+export const adminAiLogsQueryKey   = ['admin', 'ai-logs']  as const;
 
 export const useAdminUsers = () => {
   return useQuery({
@@ -80,5 +83,24 @@ export const useAdminStats = () => {
 export const useTestEmail = () => {
   return useMutation({
     mutationFn: (to?: string) => adminTestEmail(to),
+  });
+};
+
+export const useAdminAiLogs = (enabled = true, refetchIntervalMs = 5000) => {
+  return useQuery({
+    queryKey: adminAiLogsQueryKey,
+    queryFn: adminGetAiLogs,
+    enabled,
+    refetchInterval: refetchIntervalMs,
+  });
+};
+
+export const useClearAdminAiLogs = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => adminClearAiLogs(),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: adminAiLogsQueryKey });
+    },
   });
 };

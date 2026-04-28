@@ -41,6 +41,32 @@ export interface UpdateSettingsPayload {
   geminiModel?: string;
 }
 
+export interface AiDebugLogEntry {
+  id: string;
+  timestamp: string;
+  endpoint: string;
+  status: 'success' | 'error' | 'unconfigured';
+  durationMs: number;
+  userId?: string;
+  userEmail?: string;
+  model?: string;
+  request?: {
+    systemPrompt?: string;
+    userPrompt?: string;
+    body?: unknown;
+    params?: Record<string, string>;
+  };
+  rawResponse?: string;
+  parsedResponse?: unknown;
+  error?: {
+    message: string;
+    name?: string;
+    stack?: string;
+    detail?: unknown;
+  };
+  notes?: string[];
+}
+
 export const adminGetUsers = async (): Promise<AdminUser[]> => {
   const { data } = await apiClient.get<AdminUser[]>('/admin/users');
   return data;
@@ -78,4 +104,13 @@ export const adminGetStats = async (): Promise<AdminStats> => {
 export const adminTestEmail = async (to?: string): Promise<{ message: string }> => {
   const { data } = await apiClient.post<{ message: string }>('/admin/settings/test-email', { to });
   return data;
+};
+
+export const adminGetAiLogs = async (): Promise<AiDebugLogEntry[]> => {
+  const { data } = await apiClient.get<{ logs: AiDebugLogEntry[] }>('/admin/settings/ai-logs');
+  return data.logs;
+};
+
+export const adminClearAiLogs = async (): Promise<void> => {
+  await apiClient.delete('/admin/settings/ai-logs');
 };

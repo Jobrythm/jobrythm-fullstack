@@ -91,7 +91,7 @@ export async function getGeminiConfig(): Promise<GeminiConfig> {
   ]);
   return {
     apiKey: apiKey ?? process.env.GEMINI_API_KEY ?? null,
-    model: model ?? process.env.GEMINI_MODEL ?? 'gemini-2.0-flash',
+    model: model ?? process.env.GEMINI_MODEL ?? 'gemini-3-flash-preview',
   };
 }
 

@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { authenticateToken, requireAdmin, AuthRequest } from '../middleware/auth.js';
 import { getStripeConfig, getEmailConfig, getSetting, setSetting, getGeminiConfig, getIntegrationsConfig } from '../utils/appSettings.js';
 import { sendEmail } from '../utils/email.js';
+import { getAiLogs, clearAiLogs } from '../utils/aiDebugLog.js';
 
 const router = Router();
 
@@ -49,7 +50,7 @@ router.get('/', async (_req: AuthRequest, res: Response): Promise<void> => {
       emailConfigured: Boolean(emailConfig.host && emailConfig.user && emailConfig.password),
       geminiApiKey: maskKey(aiConfig.apiKey),
       geminiApiKeySet: Boolean(aiConfig.apiKey),
-      geminiModel: aiConfig.model ?? 'gemini-2.0-flash',
+      geminiModel: aiConfig.model ?? 'gemini-3-flash-preview',
       aiConfigured: Boolean(aiConfig.apiKey),
       quickbooksClientId: intConfig.quickbooksClientId ?? '',
       quickbooksClientSecret: maskKey(intConfig.quickbooksClientSecret),
@@ -174,7 +175,7 @@ router.put('/', async (req: AuthRequest, res: Response): Promise<void> => {
       emailConfigured: Boolean(emailConfig.host && emailConfig.user && emailConfig.password),
       geminiApiKey: maskKey(aiConfig.apiKey),
       geminiApiKeySet: Boolean(aiConfig.apiKey),
-      geminiModel: aiConfig.model ?? 'gemini-2.0-flash',
+      geminiModel: aiConfig.model ?? 'gemini-3-flash-preview',
       aiConfigured: Boolean(aiConfig.apiKey),
       quickbooksClientId: intConfig.quickbooksClientId ?? '',
       quickbooksClientSecret: maskKey(intConfig.quickbooksClientSecret),
@@ -212,6 +213,17 @@ router.post('/test-email', async (req: AuthRequest, res: Response): Promise<void
     console.error('Test email error:', error);
     res.status(500).json({ error: (error as Error).message });
   }
+});
+
+// GET /api/admin/settings/ai-logs — recent AI call debug entries (in-memory)
+router.get('/ai-logs', (_req: AuthRequest, res: Response): void => {
+  res.json({ logs: getAiLogs() });
+});
+
+// DELETE /api/admin/settings/ai-logs — clear the in-memory debug log buffer
+router.delete('/ai-logs', (_req: AuthRequest, res: Response): void => {
+  clearAiLogs();
+  res.json({ message: 'AI debug logs cleared' });
 });
 
 export default router;

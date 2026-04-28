@@ -31,6 +31,7 @@ import { TableSkeleton } from '../../../components/TableSkeleton';
 import { LoadingSpinner } from '../../../components/LoadingSpinner';
 import { useAuth } from '../../../hooks/useAuth';
 import type { AdminUser, AdminUserPlan } from '../../../types';
+import type { AiDebugLogEntry } from '../../../api/admin';
 import {
   useAdminCreateUser,
   useAdminDeleteUser,
@@ -40,6 +41,8 @@ import {
   useAdminUsers,
   useTestEmail,
   useUpdateAdminSettings,
+  useAdminAiLogs,
+  useClearAdminAiLogs,
 } from '../hooks/useAdminUsers';
 import { SalesPanel } from './SalesPanel';
 import { resolveApiBaseUrl } from '../../../api/hosts';
@@ -1000,12 +1003,15 @@ const EmailSettingsPanel = () => {
 
 // ── AI / Gemini Settings panel ─────────────────────────────────────────────────
 const GEMINI_MODELS = [
-  { value: 'gemini-2.5-pro-preview-05-06', label: 'Gemini 2.5 Pro Preview — most capable, best reasoning' },
-  { value: 'gemini-2.5-flash-preview-04-17', label: 'Gemini 2.5 Flash Preview — fast, efficient, great quality' },
-  { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash — recommended, fast & cost-effective' },
-  { value: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite — lightest & cheapest' },
-  { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro — stable, highly capable' },
-  { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash — stable, fast' },
+  { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro Preview — most capable, best reasoning' },
+  { value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview — recommended, fast & cost-effective' },
+  { value: 'gemini-3.1-flash-lite-preview', label: 'Gemini 3.1 Flash Lite Preview — lightest & cheapest' },
+  { value: 'gemini-2.5-pro-preview-05-06', label: 'Gemini 2.5 Pro Preview (legacy)' },
+  { value: 'gemini-2.5-flash-preview-04-17', label: 'Gemini 2.5 Flash Preview (legacy)' },
+  { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (legacy)' },
+  { value: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite (legacy)' },
+  { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro (legacy)' },
+  { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash (legacy)' },
 ];
 
 const AiSettingsPanel = () => {
@@ -1017,7 +1023,7 @@ const AiSettingsPanel = () => {
     resolver: zodResolver(aiSettingsSchema),
     defaultValues: {
       geminiApiKey: '',
-      geminiModel: 'gemini-2.0-flash',
+      geminiModel: 'gemini-3-flash-preview',
     },
   });
 
@@ -1025,7 +1031,7 @@ const AiSettingsPanel = () => {
     if (settings) {
       form.reset({
         geminiApiKey: '',
-        geminiModel: settings.geminiModel ?? 'gemini-2.0-flash',
+        geminiModel: settings.geminiModel ?? 'gemini-3-flash-preview',
       });
     }
   }, [settings, form]);
@@ -1138,8 +1144,9 @@ const AiSettingsPanel = () => {
                     ))}
                   </select>
                   <div className="form-hint">
-                    <strong>Gemini 2.0 Flash</strong> is the recommended default — fast, cost-effective, and free up to Google's rate limits.
-                    Choose <strong>2.5 Pro Preview</strong> for the highest quality reasoning.
+                    <strong>Gemini 3 Flash Preview</strong> is the recommended default — fast, cost-effective, and currently supported by Google.
+                    Choose <strong>Gemini 3.1 Pro Preview</strong> for the highest quality reasoning, or <strong>3.1 Flash Lite Preview</strong> for the lightest/cheapest option.
+                    Older Gemini 2.x and 1.x models are listed for backwards compatibility but may be deprecated by Google.
                     See <a href="https://ai.google.dev/gemini-api/docs/models" target="_blank" rel="noopener noreferrer">model docs <IconExternalLink size={10} /></a> for full details.
                   </div>
                 </div>
@@ -1153,6 +1160,213 @@ const AiSettingsPanel = () => {
             </form>
           </div>
         </div>
+      </div>
+
+      {/* Debug logs */}
+      <div className="col-12">
+        <AiDebugLogsPanel />
+      </div>
+    </div>
+  );
+};
+
+// ── AI debug logs panel ────────────────────────────────────────────────────────
+const AiDebugLogsPanel = () => {
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const { data: logs, isLoading, refetch, isFetching } = useAdminAiLogs(true, autoRefresh ? 5000 : 0);
+  const clearLogs = useClearAdminAiLogs();
+
+  const toggle = (id: string) => setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
+
+  const statusBadge = (status: AiDebugLogEntry['status']) => {
+    if (status === 'success') return <span className="badge bg-success-lt">success</span>;
+    if (status === 'unconfigured') return <span className="badge bg-warning-lt">unconfigured</span>;
+    return <span className="badge bg-danger-lt">error</span>;
+  };
+
+  const renderJson = (value: unknown): string => {
+    if (value === undefined || value === null) return '';
+    if (typeof value === 'string') return value;
+    try {
+      return JSON.stringify(value, null, 2);
+    } catch {
+      return String(value);
+    }
+  };
+
+  return (
+    <div className="card">
+      <div className="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <h3 className="card-title mb-0">
+          <IconAlertCircle size={16} className="me-2" />
+          AI Debug Logs
+          <span className="text-secondary fw-normal small ms-2">
+            (last {logs?.length ?? 0} call{logs?.length === 1 ? '' : 's'}, in-memory only)
+          </span>
+        </h3>
+        <div className="d-flex gap-2 align-items-center">
+          <label className="form-check form-switch m-0 small">
+            <input
+              type="checkbox"
+              className="form-check-input"
+              checked={autoRefresh}
+              onChange={(e) => setAutoRefresh(e.target.checked)}
+            />
+            <span className="form-check-label">Auto-refresh</span>
+          </label>
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-secondary"
+            onClick={() => void refetch()}
+            disabled={isFetching}
+          >
+            {isFetching ? 'Refreshing…' : 'Refresh'}
+          </button>
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-danger"
+            onClick={() => {
+              clearLogs.mutate(undefined, {
+                onSuccess: () => toast.success('AI debug logs cleared'),
+                onError: (err: Error) => toast.error(err.message),
+              });
+            }}
+            disabled={clearLogs.isPending || !logs?.length}
+          >
+            {clearLogs.isPending ? 'Clearing…' : 'Clear'}
+          </button>
+        </div>
+      </div>
+      <div className="card-body">
+        <p className="text-secondary small mb-3">
+          Every AI suggestion request is captured here, including the prompts sent to Gemini, the raw response, and any error returned by the model or SDK.
+          Use this to diagnose <strong>“AI suggestion failed”</strong> errors. Logs live only in the running server's memory and are wiped on restart.
+        </p>
+        {isLoading && <div className="text-secondary py-2">Loading logs…</div>}
+        {!isLoading && (!logs || logs.length === 0) && (
+          <div className="empty py-3">
+            <p className="empty-title h5">No AI calls yet</p>
+            <p className="empty-subtitle text-secondary">
+              Click an <strong>✨ AI Suggest</strong> button anywhere in the app and the request will be captured here.
+            </p>
+          </div>
+        )}
+        {logs && logs.length > 0 && (
+          <div className="d-flex flex-column gap-2">
+            {logs.map((log) => {
+              const isOpen = !!expanded[log.id];
+              return (
+                <div key={log.id} className="border rounded">
+                  <button
+                    type="button"
+                    className="btn btn-link text-decoration-none w-100 text-start p-2"
+                    onClick={() => toggle(log.id)}
+                  >
+                    <div className="d-flex align-items-center gap-2 flex-wrap">
+                      {statusBadge(log.status)}
+                      <code className="small">{log.endpoint}</code>
+                      {log.model && <span className="text-secondary small">· <code>{log.model}</code></span>}
+                      <span className="text-secondary small">· {log.durationMs} ms</span>
+                      <span className="text-secondary small ms-auto">{new Date(log.timestamp).toLocaleString()}</span>
+                    </div>
+                    {log.error && (
+                      <div className="text-danger small mt-1">
+                        {log.error.name ? `${log.error.name}: ` : ''}{log.error.message}
+                      </div>
+                    )}
+                  </button>
+                  {isOpen && (
+                    <div className="border-top p-3 bg-light-subtle">
+                      <dl className="row g-2 small mb-0">
+                        {log.userEmail && (
+                          <>
+                            <dt className="col-sm-3 text-secondary">User</dt>
+                            <dd className="col-sm-9 mb-0">{log.userEmail}{log.userId ? ` (${log.userId})` : ''}</dd>
+                          </>
+                        )}
+                        {log.notes && log.notes.length > 0 && (
+                          <>
+                            <dt className="col-sm-3 text-secondary">Notes</dt>
+                            <dd className="col-sm-9 mb-0">
+                              <ul className="mb-0 ps-3">
+                                {log.notes.map((n, i) => (<li key={i}>{n}</li>))}
+                              </ul>
+                            </dd>
+                          </>
+                        )}
+                        {log.request?.params && Object.keys(log.request.params).length > 0 && (
+                          <>
+                            <dt className="col-sm-3 text-secondary">URL params</dt>
+                            <dd className="col-sm-9 mb-0"><pre className="mb-0 small">{renderJson(log.request.params)}</pre></dd>
+                          </>
+                        )}
+                        {log.request?.body !== undefined && (
+                          <>
+                            <dt className="col-sm-3 text-secondary">Request body</dt>
+                            <dd className="col-sm-9 mb-0"><pre className="mb-0 small">{renderJson(log.request.body)}</pre></dd>
+                          </>
+                        )}
+                        {log.request?.systemPrompt && (
+                          <>
+                            <dt className="col-sm-3 text-secondary">System prompt</dt>
+                            <dd className="col-sm-9 mb-0">
+                              <pre className="mb-0 small" style={{ maxHeight: 200, overflow: 'auto', whiteSpace: 'pre-wrap' }}>
+                                {log.request.systemPrompt}
+                              </pre>
+                            </dd>
+                          </>
+                        )}
+                        {log.request?.userPrompt && (
+                          <>
+                            <dt className="col-sm-3 text-secondary">User prompt</dt>
+                            <dd className="col-sm-9 mb-0">
+                              <pre className="mb-0 small" style={{ maxHeight: 200, overflow: 'auto', whiteSpace: 'pre-wrap' }}>
+                                {log.request.userPrompt}
+                              </pre>
+                            </dd>
+                          </>
+                        )}
+                        {log.rawResponse && (
+                          <>
+                            <dt className="col-sm-3 text-secondary">Raw model response</dt>
+                            <dd className="col-sm-9 mb-0">
+                              <pre className="mb-0 small" style={{ maxHeight: 200, overflow: 'auto', whiteSpace: 'pre-wrap' }}>
+                                {log.rawResponse}
+                              </pre>
+                            </dd>
+                          </>
+                        )}
+                        {log.parsedResponse !== undefined && (
+                          <>
+                            <dt className="col-sm-3 text-secondary">Parsed result</dt>
+                            <dd className="col-sm-9 mb-0">
+                              <pre className="mb-0 small" style={{ maxHeight: 200, overflow: 'auto' }}>
+                                {renderJson(log.parsedResponse)}
+                              </pre>
+                            </dd>
+                          </>
+                        )}
+                        {log.error && (
+                          <>
+                            <dt className="col-sm-3 text-secondary">Error</dt>
+                            <dd className="col-sm-9 mb-0">
+                              <pre className="mb-0 small text-danger" style={{ maxHeight: 300, overflow: 'auto', whiteSpace: 'pre-wrap' }}>
+                                {(log.error.name ? `${log.error.name}: ` : '') + log.error.message}
+                                {log.error.stack ? `\n\n${log.error.stack}` : ''}
+                                {log.error.detail ? `\n\nDetail:\n${renderJson(log.error.detail)}` : ''}
+                              </pre>
+                            </dd>
+                          </>
+                        )}
+                      </dl>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
