@@ -43,7 +43,10 @@ export const AiSuggestPanel = ({ jobId, onAdd }: Props) => {
     setOpen(true);
     try {
       const { data } = await apiClient.post<AiSuggestResponse>(
-        `/jobs/${jobId}/ai-suggest-line-items`
+        `/jobs/${jobId}/ai-suggest-line-items`,
+        undefined,
+        // AI generation can take longer than the default 10s axios timeout.
+        { timeout: 60000 },
       );
       setSuggestions(data.suggestions);
       setSelected(new Set(data.suggestions.map((_, i) => i)));

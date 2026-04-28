@@ -26,7 +26,14 @@ export const AiDescribeInput = ({ endpoint, placeholder, onResult }: AiDescribeI
     setLoading(true);
     setError(null);
     try {
-      const res = await apiClient.post<Record<string, string>>(endpoint, { description: text.trim() });
+      // AI generation can take longer than the default 10s axios timeout,
+      // so use a longer per-request timeout to avoid client-side aborts on
+      // requests that the backend actually completes successfully.
+      const res = await apiClient.post<Record<string, string>>(
+        endpoint,
+        { description: text.trim() },
+        { timeout: 60000 },
+      );
       onResult(res.data);
       setOpen(false);
       setText('');
