@@ -4,6 +4,7 @@ import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 import { getGeminiConfig } from '../utils/appSettings.js';
 import { AppDataSource } from '../config/database.js';
 import { Job } from '../entities/Job.js';
+import { recordAiLog, serializeError, type AiDebugLogEntry } from '../utils/aiDebugLog.js';
 
 const router = Router();
 router.use(authenticateToken);
@@ -14,7 +15,7 @@ async function buildAiClient(): Promise<{ ai: GoogleGenAI; model: string } | nul
   if (!config.apiKey) return null;
   return {
     ai: new GoogleGenAI({ apiKey: config.apiKey }),
-    model: config.model ?? 'gemini-2.0-flash',
+    model: config.model ?? 'gemini-3-flash-preview',
   };
 }
 
@@ -28,16 +29,42 @@ function extractJson(raw: string): string {
   return raw.trim();
 }
 
+// Truncate large strings before logging so the buffer stays small.
+function truncate(s: string | undefined, max = 4000): string | undefined {
+  if (s == null) return s;
+  return s.length > max ? `${s.slice(0, max)}…[truncated ${s.length - max} chars]` : s;
+}
+
 // POST /api/jobs/:id/ai-suggest-line-items
 // Uses Gemini to suggest line items based on job title/description
 // and the contractor's recent job history.
 router.post('/jobs/:id/ai-suggest-line-items', async (req: AuthRequest, res: Response): Promise<void> => {
+  const startedAt = Date.now();
+  const endpoint = 'POST /api/jobs/:id/ai-suggest-line-items';
+  const userId = req.user?.userId;
+  const userEmail = req.user?.email;
+  const notes: string[] = [];
+  let model: string | undefined;
+  let systemPrompt: string | undefined;
+  let userPrompt: string | undefined;
+  let rawText: string | undefined;
+
   try {
     const aiClient = await buildAiClient();
     if (!aiClient) {
+      recordAiLog({
+        endpoint,
+        status: 'unconfigured',
+        durationMs: Date.now() - startedAt,
+        userId, userEmail,
+        request: { params: { id: String(req.params.id ?? "") } },
+        notes: ['No Gemini API key configured'],
+      });
       res.status(503).json({ error: 'AI features are not configured. Ask your admin to add a Gemini API key in the admin settings.' });
       return;
     }
+    model = aiClient.model;
+    notes.push(`Using model: ${model}`);
 
     const jobRepository = AppDataSource.getRepository(Job);
 
@@ -51,6 +78,15 @@ router.post('/jobs/:id/ai-suggest-line-items', async (req: AuthRequest, res: Res
       .getOne();
 
     if (!job) {
+      recordAiLog({
+        endpoint,
+        status: 'error',
+        durationMs: Date.now() - startedAt,
+        userId, userEmail, model,
+        request: { params: { id: String(req.params.id ?? "") } },
+        error: { message: 'Job not found' },
+        notes,
+      });
       res.status(404).json({ error: 'Job not found' });
       return;
     }
@@ -66,6 +102,8 @@ router.post('/jobs/:id/ai-suggest-line-items', async (req: AuthRequest, res: Res
       .take(20)
       .getMany();
 
+    notes.push(`Loaded ${recentJobs.length} historical jobs for context`);
+
     // Build context string from recent jobs
     const historySummary = recentJobs
       .filter((j) => j.lineItems && j.lineItems.length > 0)
@@ -78,7 +116,7 @@ router.post('/jobs/:id/ai-suggest-line-items', async (req: AuthRequest, res: Res
       })
       .join('\n\n');
 
-    const systemPrompt = `You are a helpful assistant for trade contractors (plumbers, HVAC, electricians, handymen). 
+    systemPrompt = `You are a helpful assistant for trade contractors (plumbers, HVAC, electricians, handymen). 
 Your task is to suggest appropriate line items for a job quote based on the job description and the contractor's past job history.
 
 Return ONLY a valid JSON object with a single key "lineItems" containing an array of line item objects.
@@ -93,7 +131,7 @@ Example response:
 
 Respond with ONLY the JSON object, no markdown, no explanation.`;
 
-    const userPrompt = `Job title: ${job.title}
+    userPrompt = `Job title: ${job.title}
 Job description: ${job.description || 'No description provided'}
 ${job.client ? `Client type: ${job.client.name}` : ''}
 
@@ -111,16 +149,38 @@ Please suggest 3–8 appropriate line items for this job.`;
       },
     });
 
-    const raw = extractJson(response.text ?? '{}');
+    rawText = response.text ?? '';
+    notes.push(`Raw response length: ${rawText.length} chars`);
+
+    const raw = extractJson(rawText || '{}');
     let parsed: { lineItems?: unknown[] };
     try {
       parsed = JSON.parse(raw) as { lineItems?: unknown[] };
-    } catch {
+    } catch (parseErr) {
+      recordAiLog({
+        endpoint, status: 'error',
+        durationMs: Date.now() - startedAt,
+        userId, userEmail, model,
+        request: { systemPrompt: truncate(systemPrompt), userPrompt: truncate(userPrompt), params: { id: String(req.params.id ?? "") } },
+        rawResponse: truncate(rawText),
+        error: { message: 'Failed to parse JSON from AI response', detail: serializeError(parseErr) },
+        notes,
+      });
       res.status(500).json({ error: 'AI returned an invalid response. Please try again.' });
       return;
     }
 
     if (!Array.isArray(parsed.lineItems)) {
+      recordAiLog({
+        endpoint, status: 'error',
+        durationMs: Date.now() - startedAt,
+        userId, userEmail, model,
+        request: { systemPrompt: truncate(systemPrompt), userPrompt: truncate(userPrompt), params: { id: String(req.params.id ?? "") } },
+        rawResponse: truncate(rawText),
+        parsedResponse: parsed,
+        error: { message: 'AI response missing "lineItems" array' },
+        notes,
+      });
       res.status(500).json({ error: 'AI returned an unexpected format. Please try again.' });
       return;
     }
@@ -138,10 +198,30 @@ Please suggest 3–8 appropriate line items for this job.`;
       }))
       .filter((item) => item.description.length > 0);
 
+    recordAiLog({
+      endpoint, status: 'success',
+      durationMs: Date.now() - startedAt,
+      userId, userEmail, model,
+      request: { systemPrompt: truncate(systemPrompt), userPrompt: truncate(userPrompt), params: { id: String(req.params.id ?? "") } },
+      rawResponse: truncate(rawText),
+      parsedResponse: { suggestions },
+      notes: [...notes, `Returned ${suggestions.length} suggestions`],
+    });
+
     res.json({ suggestions, model: aiClient.model });
   } catch (error) {
     console.error('AI suggest error:', error);
-    const msg = error instanceof Error ? error.message : 'Unknown error';
+    const serialized = serializeError(error);
+    recordAiLog({
+      endpoint, status: 'error',
+      durationMs: Date.now() - startedAt,
+      userId, userEmail, model,
+      request: { systemPrompt: truncate(systemPrompt), userPrompt: truncate(userPrompt), params: { id: String(req.params.id ?? "") } },
+      rawResponse: truncate(rawText),
+      error: serialized,
+      notes,
+    });
+    const msg = serialized?.message ?? 'Unknown error';
     res.status(500).json({ error: `AI suggestion failed: ${msg}` });
   }
 });
@@ -149,20 +229,48 @@ Please suggest 3–8 appropriate line items for this job.`;
 // POST /api/ai/suggest-client
 // Parses a plain-English description into structured client fields.
 router.post('/ai/suggest-client', async (req: AuthRequest, res: Response): Promise<void> => {
+  const startedAt = Date.now();
+  const endpoint = 'POST /api/ai/suggest-client';
+  const userId = req.user?.userId;
+  const userEmail = req.user?.email;
+  const notes: string[] = [];
+  let model: string | undefined;
+  let systemPrompt: string | undefined;
+  let userPrompt: string | undefined;
+  let rawText: string | undefined;
+
   try {
     const aiClient = await buildAiClient();
     if (!aiClient) {
+      recordAiLog({
+        endpoint, status: 'unconfigured',
+        durationMs: Date.now() - startedAt,
+        userId, userEmail,
+        request: { body: req.body },
+        notes: ['No Gemini API key configured'],
+      });
       res.status(503).json({ error: 'AI features are not configured. Add a Gemini API key in Admin → AI Settings.' });
       return;
     }
+    model = aiClient.model;
+    notes.push(`Using model: ${model}`);
 
     const { description } = req.body as { description?: string };
     if (!description?.trim()) {
+      recordAiLog({
+        endpoint, status: 'error',
+        durationMs: Date.now() - startedAt,
+        userId, userEmail, model,
+        request: { body: req.body },
+        error: { message: 'description is required' },
+        notes,
+      });
       res.status(400).json({ error: 'description is required' });
       return;
     }
+    userPrompt = description.trim();
 
-    const systemPrompt = `You are a data extraction assistant for a trade contractor CRM.
+    systemPrompt = `You are a data extraction assistant for a trade contractor CRM.
 Extract structured client/contact information from a plain-English description.
 Return ONLY a valid JSON object with these exact fields (all optional except name):
 - name: string (person or company name)
@@ -177,7 +285,7 @@ Respond with ONLY the JSON object. Do not wrap in markdown.`;
 
     const response = await aiClient.ai.models.generateContent({
       model: aiClient.model,
-      contents: description.trim(),
+      contents: userPrompt,
       config: {
         systemInstruction: systemPrompt,
         temperature: 0.2,
@@ -185,25 +293,59 @@ Respond with ONLY the JSON object. Do not wrap in markdown.`;
       },
     });
 
-    const raw = extractJson(response.text ?? '{}');
+    rawText = response.text ?? '';
+    notes.push(`Raw response length: ${rawText.length} chars`);
+
+    const raw = extractJson(rawText || '{}');
     let parsed: Record<string, unknown>;
     try {
       parsed = JSON.parse(raw) as Record<string, unknown>;
-    } catch {
+    } catch (parseErr) {
+      recordAiLog({
+        endpoint, status: 'error',
+        durationMs: Date.now() - startedAt,
+        userId, userEmail, model,
+        request: { systemPrompt: truncate(systemPrompt), userPrompt: truncate(userPrompt) },
+        rawResponse: truncate(rawText),
+        error: { message: 'Failed to parse JSON from AI response', detail: serializeError(parseErr) },
+        notes,
+      });
       res.status(500).json({ error: 'AI returned an invalid response. Please try again.' });
       return;
     }
 
-    res.json({
+    const result = {
       name: String(parsed.name ?? '').trim(),
       email: String(parsed.email ?? '').trim(),
       phone: String(parsed.phone ?? '').trim(),
       address: String(parsed.address ?? '').trim(),
       notes: String(parsed.notes ?? '').trim(),
+    };
+
+    recordAiLog({
+      endpoint, status: 'success',
+      durationMs: Date.now() - startedAt,
+      userId, userEmail, model,
+      request: { systemPrompt: truncate(systemPrompt), userPrompt: truncate(userPrompt) },
+      rawResponse: truncate(rawText),
+      parsedResponse: result,
+      notes,
     });
+
+    res.json(result);
   } catch (error) {
     console.error('AI suggest-client error:', error);
-    const msg = error instanceof Error ? error.message : 'Unknown error';
+    const serialized = serializeError(error);
+    recordAiLog({
+      endpoint, status: 'error',
+      durationMs: Date.now() - startedAt,
+      userId, userEmail, model,
+      request: { systemPrompt: truncate(systemPrompt), userPrompt: truncate(userPrompt), body: req.body },
+      rawResponse: truncate(rawText),
+      error: serialized,
+      notes,
+    });
+    const msg = serialized?.message ?? 'Unknown error';
     res.status(500).json({ error: `AI suggestion failed: ${msg}` });
   }
 });
@@ -211,22 +353,50 @@ Respond with ONLY the JSON object. Do not wrap in markdown.`;
 // POST /api/ai/suggest-job
 // Parses a plain-English description into structured job fields.
 router.post('/ai/suggest-job', async (req: AuthRequest, res: Response): Promise<void> => {
+  const startedAt = Date.now();
+  const endpoint = 'POST /api/ai/suggest-job';
+  const userId = req.user?.userId;
+  const userEmail = req.user?.email;
+  const notes: string[] = [];
+  let model: string | undefined;
+  let systemPrompt: string | undefined;
+  let userPrompt: string | undefined;
+  let rawText: string | undefined;
+
   try {
     const aiClient = await buildAiClient();
     if (!aiClient) {
+      recordAiLog({
+        endpoint, status: 'unconfigured',
+        durationMs: Date.now() - startedAt,
+        userId, userEmail,
+        request: { body: req.body },
+        notes: ['No Gemini API key configured'],
+      });
       res.status(503).json({ error: 'AI features are not configured. Add a Gemini API key in Admin → AI Settings.' });
       return;
     }
+    model = aiClient.model;
+    notes.push(`Using model: ${model}`);
 
     const { description } = req.body as { description?: string };
     if (!description?.trim()) {
+      recordAiLog({
+        endpoint, status: 'error',
+        durationMs: Date.now() - startedAt,
+        userId, userEmail, model,
+        request: { body: req.body },
+        error: { message: 'description is required' },
+        notes,
+      });
       res.status(400).json({ error: 'description is required' });
       return;
     }
+    userPrompt = description.trim();
 
     const today = new Date().toISOString().slice(0, 10);
 
-    const systemPrompt = `You are a data extraction assistant for a trade contractor job management system.
+    systemPrompt = `You are a data extraction assistant for a trade contractor job management system.
 Extract structured job information from a plain-English description.
 Today's date is ${today}.
 Return ONLY a valid JSON object with these exact fields (all optional except title):
@@ -241,7 +411,7 @@ Respond with ONLY the JSON object. Do not wrap in markdown.`;
 
     const response = await aiClient.ai.models.generateContent({
       model: aiClient.model,
-      contents: description.trim(),
+      contents: userPrompt,
       config: {
         systemInstruction: systemPrompt,
         temperature: 0.2,
@@ -249,11 +419,23 @@ Respond with ONLY the JSON object. Do not wrap in markdown.`;
       },
     });
 
-    const raw = extractJson(response.text ?? '{}');
+    rawText = response.text ?? '';
+    notes.push(`Raw response length: ${rawText.length} chars`);
+
+    const raw = extractJson(rawText || '{}');
     let parsed: Record<string, unknown>;
     try {
       parsed = JSON.parse(raw) as Record<string, unknown>;
-    } catch {
+    } catch (parseErr) {
+      recordAiLog({
+        endpoint, status: 'error',
+        durationMs: Date.now() - startedAt,
+        userId, userEmail, model,
+        request: { systemPrompt: truncate(systemPrompt), userPrompt: truncate(userPrompt) },
+        rawResponse: truncate(rawText),
+        error: { message: 'Failed to parse JSON from AI response', detail: serializeError(parseErr) },
+        notes,
+      });
       res.status(500).json({ error: 'AI returned an invalid response. Please try again.' });
       return;
     }
@@ -261,17 +443,42 @@ Respond with ONLY the JSON object. Do not wrap in markdown.`;
     // Validate date format
     const isIsoDate = (v: unknown) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
 
-    res.json({
+    const result = {
       title: String(parsed.title ?? '').trim(),
       description: String(parsed.description ?? '').trim(),
       startDate: isIsoDate(parsed.startDate) ? (parsed.startDate as string) : '',
       endDate: isIsoDate(parsed.endDate) ? (parsed.endDate as string) : '',
+    };
+
+    recordAiLog({
+      endpoint, status: 'success',
+      durationMs: Date.now() - startedAt,
+      userId, userEmail, model,
+      request: { systemPrompt: truncate(systemPrompt), userPrompt: truncate(userPrompt) },
+      rawResponse: truncate(rawText),
+      parsedResponse: result,
+      notes,
     });
+
+    res.json(result);
   } catch (error) {
     console.error('AI suggest-job error:', error);
-    const msg = error instanceof Error ? error.message : 'Unknown error';
+    const serialized = serializeError(error);
+    recordAiLog({
+      endpoint, status: 'error',
+      durationMs: Date.now() - startedAt,
+      userId, userEmail, model,
+      request: { systemPrompt: truncate(systemPrompt), userPrompt: truncate(userPrompt), body: req.body },
+      rawResponse: truncate(rawText),
+      error: serialized,
+      notes,
+    });
+    const msg = serialized?.message ?? 'Unknown error';
     res.status(500).json({ error: `AI suggestion failed: ${msg}` });
   }
 });
+
+// Re-export the type so other modules (admin routes) can consume it.
+export type { AiDebugLogEntry };
 
 export default router;
